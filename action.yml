@@ -1,0 +1,35 @@
+name: 'Send Status'
+description: 'Sends the status of a step to the meshcloud API'
+inputs:
+  base_url:
+    description: 'The base URL for the API'
+    required: true
+  bb_run_uuid:
+    description: 'The Building Block Run UUID'
+    required: true
+  step_id:
+    description: 'The ID of the step'
+    required: true
+  status:
+    description: 'The status of the step (SUCCEEDED or FAILED)'
+    required: true
+  user_message:
+    description: 'The user message for a failed step'
+    required: false
+  system_message:
+    description: 'The system message for a failed step'
+    required: false
+  token:
+    description: 'The API token for authentication'
+    required: true
+  is_final:
+    description: 'Indicates if this is the final status report'
+    required: false
+    default: 'false'
+  summary:
+    description: 'The summary message for the final status report'
+    required: false
+runs:
+  using: 'node12'
+  main: 'dist/index.js'
+
