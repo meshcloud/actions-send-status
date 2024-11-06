@@ -29,7 +29,11 @@ async function run() {
       token = tokenData.token;
       core.debug(`Token successfully read from file: ${tokenFilePath}`);
     } catch (error) {
-      core.setFailed(`Failed to read token from file: ${error.message}`);
+      if (error instanceof Error) {
+        core.setFailed(`Failed to read token from file at ${path.join(tempDir, 'meshstack_token.json')}: ${error.message}`);
+      } else {
+        core.setFailed('Failed to read token from file: An unknown error occurred');
+      }
       return;
     }
 
