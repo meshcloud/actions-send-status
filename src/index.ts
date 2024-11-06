@@ -25,9 +25,17 @@ async function run() {
     let token;
     try {
       const tokenFilePath = path.join(tempDir, 'meshstack_token.json');
+      core.debug(`Token file path: ${tokenFilePath}`);
+      console.log(`Token file path: ${tokenFilePath}`);
+
+      if (!fs.existsSync(tokenFilePath)) {
+        throw new Error('Token file does not exist');
+      }
+
       const tokenData = JSON.parse(fs.readFileSync(tokenFilePath, 'utf8'));
       token = tokenData.token;
       core.debug(`Token successfully read from file: ${tokenFilePath}`);
+      console.log(`Token successfully read from file: ${tokenFilePath}`);
     } catch (error) {
       if (error instanceof Error) {
         core.setFailed(`Failed to read token from file at ${path.join(tempDir, 'meshstack_token.json')}: ${error.message}`);
