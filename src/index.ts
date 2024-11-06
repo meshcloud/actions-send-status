@@ -22,9 +22,16 @@ async function run() {
     // Set the temporary directory path as an output
     core.setOutput('temp_directory', tempDir);
 
-    const tokenFilePath = path.join(tempDir, 'meshstack_token.json');
-    const tokenData = JSON.parse(fs.readFileSync(tokenFilePath, 'utf8'));
-    const token = tokenData.token;
+    let token;
+    try {
+      const tokenFilePath = path.join(tempDir, 'meshstack_token.json');
+      const tokenData = JSON.parse(fs.readFileSync(tokenFilePath, 'utf8'));
+      token = tokenData.token;
+      core.debug(`Token successfully read from file: ${tokenFilePath}`);
+    } catch (error) {
+      core.setFailed(`Failed to read token from file: ${error.message}`);
+      return;
+    }
 
     const data: any = {
       status: isFinal ? status : "IN_PROGRESS",
