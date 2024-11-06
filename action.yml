@@ -19,9 +19,6 @@ inputs:
   system_message:
     description: 'The system message for a failed step'
     required: false
-  token:
-    description: 'The API token for authentication'
-    required: true
   is_final:
     description: 'Indicates if this is the final status report'
     required: false

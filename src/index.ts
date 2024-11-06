@@ -1,5 +1,8 @@
 import * as core from '@actions/core';
 import axios from 'axios';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 
 async function run() {
   try {
@@ -9,9 +12,13 @@ async function run() {
     const status = core.getInput('status');
     const userMessage = core.getInput('user_message');
     const systemMessage = core.getInput('system_message');
-    const token = core.getInput('token');
     const isFinal = core.getInput('is_final') === 'true';
     const summary = core.getInput('summary');
+
+    const tempDir = process.env.RUNNER_TEMP || os.tmpdir();
+    const tokenFilePath = path.join(tempDir, 'meshstack_token.json');
+    const tokenData = JSON.parse(fs.readFileSync(tokenFilePath, 'utf8'));
+    const token = tokenData.token;
 
     const data: any = {
       status: isFinal ? status : "IN_PROGRESS",
