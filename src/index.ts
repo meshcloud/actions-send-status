@@ -19,6 +19,9 @@ async function run() {
     core.debug(`Temporary directory: ${tempDir}`);
     console.log(`Temporary directory: ${tempDir}`); // This will also print the path to the console
 
+    // Set the temporary directory path as an output
+    core.setOutput('temp_directory', tempDir);
+
     const tokenFilePath = path.join(tempDir, 'meshstack_token.json');
     const tokenData = JSON.parse(fs.readFileSync(tokenFilePath, 'utf8'));
     const token = tokenData.token;
