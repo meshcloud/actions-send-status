@@ -6,8 +6,9 @@ import * as os from 'os';
 
 async function run() {
   try {
-    // const baseUrl = core.getInput('base_url');
-    // const bbRunUuid = core.getInput('bb_run_uuid');
+    let baseUrl: string;
+    let bbRunUuid: string;
+
     const stepId = core.getInput('step_id');
     const status = core.getInput('status');
     const userMessage = core.getInput('user_message');
@@ -22,10 +23,7 @@ async function run() {
     // Set the temporary directory path as an output
     core.setOutput('temp_directory', tempDir);
 
-    let token: string;
-    let baseUrl: string;
-    let bbRunUuid: string;
-
+    let token;
     try {
       const tokenFilePath = path.join(tempDir, 'meshstack_token.json');
       core.debug(`Token file path: ${tokenFilePath}`);
@@ -54,14 +52,11 @@ async function run() {
       status: isFinal ? status : "IN_PROGRESS",
       steps: [{
         id: stepId,
-        status: status
+        status: status,
+        userMessage: userMessage,
+        systemMessage: systemMessage
       }]
     };
-
-    if (status === 'FAILED') {
-      data.steps[0].userMessage = userMessage;
-      data.steps[0].systemMessage = systemMessage;
-    }
 
     if (isFinal) {
       data.summary = summary;
@@ -91,3 +86,4 @@ async function run() {
 }
 
 run();
+
