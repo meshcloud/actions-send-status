@@ -1,12 +1,6 @@
 name: 'Send Status'
 description: 'Sends the status of a step to the meshcloud API'
 inputs:
-  base_url:
-    description: 'The base URL for the API'
-    required: true
-  bb_run_uuid:
-    description: 'The Building Block Run UUID'
-    required: true
   step_id:
     description: 'The ID of the step'
     required: true
