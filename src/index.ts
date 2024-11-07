@@ -22,7 +22,10 @@ async function run() {
     // Set the temporary directory path as an output
     core.setOutput('temp_directory', tempDir);
 
-    let token;
+    let token: string;
+    let baseUrl: string;
+    let bbRunUuid: string;
+
     try {
       const tokenFilePath = path.join(tempDir, 'meshstack_token.json');
       core.debug(`Token file path: ${tokenFilePath}`);

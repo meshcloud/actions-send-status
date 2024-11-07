@@ -40,8 +40,8 @@ const path = __importStar(__nccwpck_require__(1017));
 const os = __importStar(__nccwpck_require__(2037));
 async function run() {
     try {
-        const baseUrl = core.getInput('base_url');
-        const bbRunUuid = core.getInput('bb_run_uuid');
+        // const baseUrl = core.getInput('base_url');
+        // const bbRunUuid = core.getInput('bb_run_uuid');
         const stepId = core.getInput('step_id');
         const status = core.getInput('status');
         const userMessage = core.getInput('user_message');
@@ -54,6 +54,8 @@ async function run() {
         // Set the temporary directory path as an output
         core.setOutput('temp_directory', tempDir);
         let token;
+        let baseUrl;
+        let bbRunUuid;
         try {
             const tokenFilePath = path.join(tempDir, 'meshstack_token.json');
             core.debug(`Token file path: ${tokenFilePath}`);
@@ -63,6 +65,8 @@ async function run() {
             }
             const tokenData = JSON.parse(fs.readFileSync(tokenFilePath, 'utf8'));
             token = tokenData.token;
+            bbRunUuid = tokenData.bbRunUuid;
+            baseUrl = tokenData.baseUrl;
             core.debug(`Token successfully read from file: ${tokenFilePath}`);
             console.log(`Token successfully read from file: ${tokenFilePath}`);
         }
