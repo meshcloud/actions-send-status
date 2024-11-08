@@ -1,119 +1,6 @@
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 9283:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-const core = __importStar(__nccwpck_require__(2186));
-const axios_1 = __importDefault(__nccwpck_require__(8757));
-const fs = __importStar(__nccwpck_require__(7147));
-const path = __importStar(__nccwpck_require__(1017));
-const os = __importStar(__nccwpck_require__(2037));
-async function run() {
-    try {
-        let baseUrl;
-        let bbRunUuid;
-        const stepId = core.getInput('step_id');
-        const status = core.getInput('status');
-        const userMessage = core.getInput('user_message');
-        const systemMessage = core.getInput('system_message');
-        const isFinal = core.getInput('is_final') === 'true';
-        const summary = core.getInput('summary');
-        const tempDir = process.env.RUNNER_TEMP || os.tmpdir();
-        core.debug(`Temporary directory: ${tempDir}`);
-        console.log(`Temporary directory: ${tempDir}`); // This will also print the path to the console
-        // Set the temporary directory path as an output
-        core.setOutput('temp_directory', tempDir);
-        let token;
-        try {
-            const tokenFilePath = path.join(tempDir, 'meshstack_token.json');
-            core.debug(`Token file path: ${tokenFilePath}`);
-            console.log(`Token file path: ${tokenFilePath}`);
-            if (!fs.existsSync(tokenFilePath)) {
-                throw new Error('Token file does not exist');
-            }
-            const tokenData = JSON.parse(fs.readFileSync(tokenFilePath, 'utf8'));
-            token = tokenData.token;
-            bbRunUuid = tokenData.bbRunUuid;
-            baseUrl = tokenData.baseUrl;
-            core.debug(`Token successfully read from file: ${tokenFilePath}`);
-            console.log(`Token successfully read from file: ${tokenFilePath}`);
-        }
-        catch (error) {
-            if (error instanceof Error) {
-                core.setFailed(`Failed to read token from file at ${path.join(tempDir, 'meshstack_token.json')}: ${error.message}`);
-            }
-            else {
-                core.setFailed('Failed to read token from file: An unknown error occurred');
-            }
-            return;
-        }
-        const data = {
-            status: isFinal ? status : "IN_PROGRESS",
-            steps: [{
-                    id: stepId,
-                    status: status,
-                    userMessage: userMessage,
-                    systemMessage: systemMessage
-                }]
-        };
-        if (isFinal) {
-            data.summary = summary;
-        }
-        core.debug(`Constructed data object: ${JSON.stringify(data)}`);
-        console.log(`Constructed data object: ${JSON.stringify(data)}`);
-        const response = await axios_1.default.patch(`${baseUrl}/api/meshobjects/meshbuildingblockruns/${bbRunUuid}/status/source/github`, data, {
-            headers: {
-                'Content-Type': 'application/vnd.meshcloud.api.meshbuildingblockrun.v1.hal+json',
-                'Accept': 'application/vnd.meshcloud.api.meshbuildingblockrun.v1.hal+json',
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        core.setOutput('response', response.data);
-    }
-    catch (error) {
-        if (error instanceof Error) {
-            core.setFailed(error.message);
-        }
-        else {
-            core.setFailed('An unknown error occurred');
-        }
-    }
-}
-run();
-
-
-/***/ }),
-
 /***/ 7351:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -28089,6 +27976,119 @@ module.exports = {
 
 /***/ }),
 
+/***/ 6144:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const core = __importStar(__nccwpck_require__(2186));
+const axios_1 = __importDefault(__nccwpck_require__(8757));
+const fs = __importStar(__nccwpck_require__(7147));
+const path = __importStar(__nccwpck_require__(1017));
+const os = __importStar(__nccwpck_require__(2037));
+async function run() {
+    try {
+        let baseUrl;
+        let bbRunUuid;
+        const stepId = core.getInput('step_id');
+        const status = core.getInput('status');
+        const userMessage = core.getInput('user_message');
+        const systemMessage = core.getInput('system_message');
+        const isFinal = core.getInput('is_final') === 'true';
+        const summary = core.getInput('summary');
+        const tempDir = process.env.RUNNER_TEMP || os.tmpdir();
+        core.debug(`Temporary directory: ${tempDir}`);
+        console.log(`Temporary directory: ${tempDir}`); // This will also print the path to the console
+        // Set the temporary directory path as an output
+        core.setOutput('temp_directory', tempDir);
+        let token;
+        try {
+            const tokenFilePath = path.join(tempDir, 'meshstack_token.json');
+            core.debug(`Token file path: ${tokenFilePath}`);
+            console.log(`Token file path: ${tokenFilePath}`);
+            if (!fs.existsSync(tokenFilePath)) {
+                throw new Error('Token file does not exist');
+            }
+            const tokenData = JSON.parse(fs.readFileSync(tokenFilePath, 'utf8'));
+            token = tokenData.token;
+            bbRunUuid = tokenData.bbRunUuid;
+            baseUrl = tokenData.baseUrl;
+            core.debug(`Token successfully read from file: ${tokenFilePath}`);
+            console.log(`Token successfully read from file: ${tokenFilePath}`);
+        }
+        catch (error) {
+            if (error instanceof Error) {
+                core.setFailed(`Failed to read token from file at ${path.join(tempDir, 'meshstack_token.json')}: ${error.message}`);
+            }
+            else {
+                core.setFailed('Failed to read token from file: An unknown error occurred');
+            }
+            return;
+        }
+        const data = {
+            status: isFinal ? status : "IN_PROGRESS",
+            steps: [{
+                    id: stepId,
+                    status: status,
+                    userMessage: userMessage,
+                    systemMessage: systemMessage
+                }]
+        };
+        if (isFinal) {
+            data.summary = summary;
+        }
+        core.debug(`Constructed data object: ${JSON.stringify(data)}`);
+        console.log(`Constructed data object: ${JSON.stringify(data)}`);
+        const response = await axios_1.default.patch(`${baseUrl}/api/meshobjects/meshbuildingblockruns/${bbRunUuid}/status/source/github`, data, {
+            headers: {
+                'Content-Type': 'application/vnd.meshcloud.api.meshbuildingblockrun.v1.hal+json',
+                'Accept': 'application/vnd.meshcloud.api.meshbuildingblockrun.v1.hal+json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        core.setOutput('response', response.data);
+    }
+    catch (error) {
+        if (error instanceof Error) {
+            core.setFailed(error.message);
+        }
+        else {
+            core.setFailed('An unknown error occurred');
+        }
+    }
+}
+run();
+
+
+/***/ }),
+
 /***/ 9975:
 /***/ ((module) => {
 
@@ -34802,7 +34802,7 @@ module.exports = JSON.parse('{"application/1d-interleaved-parityfec":{"source":"
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
 /******/ 	// This entry module is referenced by other modules so it can't be inlined
-/******/ 	var __webpack_exports__ = __nccwpck_require__(9283);
+/******/ 	var __webpack_exports__ = __nccwpck_require__(6144);
 /******/ 	module.exports = __webpack_exports__;
 /******/ 	
 /******/ })()

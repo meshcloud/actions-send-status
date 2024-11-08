@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "build": "tsc && ncc build lib/index.js -o dist",
+    "build": "ncc build src/index.ts -o dist",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
