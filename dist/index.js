@@ -40,8 +40,8 @@ const path = __importStar(__nccwpck_require__(1017));
 const os = __importStar(__nccwpck_require__(2037));
 async function run() {
     try {
-        // const baseUrl = core.getInput('base_url');
-        // const bbRunUuid = core.getInput('bb_run_uuid');
+        let baseUrl;
+        let bbRunUuid;
         const stepId = core.getInput('step_id');
         const status = core.getInput('status');
         const userMessage = core.getInput('user_message');
@@ -54,8 +54,6 @@ async function run() {
         // Set the temporary directory path as an output
         core.setOutput('temp_directory', tempDir);
         let token;
-        let baseUrl;
-        let bbRunUuid;
         try {
             const tokenFilePath = path.join(tempDir, 'meshstack_token.json');
             core.debug(`Token file path: ${tokenFilePath}`);
@@ -83,17 +81,16 @@ async function run() {
             status: isFinal ? status : "IN_PROGRESS",
             steps: [{
                     id: stepId,
-                    status: status
+                    status: status,
+                    userMessage: userMessage,
+                    systemMessage: systemMessage
                 }]
         };
-        if (status === 'FAILED') {
-            data.steps[0].userMessage = userMessage;
-            data.steps[0].systemMessage = systemMessage;
-        }
         if (isFinal) {
             data.summary = summary;
-            data.steps = [];
         }
+        core.debug(`Constructed data object: ${JSON.stringify(data)}`);
+        console.log(`Constructed data object: ${JSON.stringify(data)}`);
         const response = await axios_1.default.patch(`${baseUrl}/api/meshobjects/meshbuildingblockruns/${bbRunUuid}/status/source/github`, data, {
             headers: {
                 'Content-Type': 'application/vnd.meshcloud.api.meshbuildingblockrun.v1.hal+json',
