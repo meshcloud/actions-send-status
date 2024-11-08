@@ -1,8 +1,11 @@
 # actions-send-status
 
-This GitHub Action helps you send the status of a step to the meshcloud API.
+This GitHub Action helps you send the status back to your buildinbblock-run in meshStack.
+
+Before using this action, set up authentication to Meshstack with the [meshcloud/actions-register-source](https://github.com/meshcloud/actions-register-source) action. This action logs in to Meshstack and registers the source of the run.
 
 ## Overview
+
 
 The meshStack Building Block pipeline allows you to automate and manage complex workflows by defining a series of steps that need to be executed. Each Building Block Run represents an instance of such a workflow. This GitHub Action helps you send the status of a step back to the registered source in the meshStack Building Block pipeline.
 
@@ -34,44 +37,40 @@ Whenever a run was successful but meshStack did not receive a success for one or
 
 Besides a status, meshStack can also show custom user messages consuming the service and operator messages to the provider of the pipline run inside of meshStack. This can be used to provide more detailed information about the current state of the run.
 
-## GitHub Action: Send Status
-
-### name: 'Send Status'
-### description: 'Sends the status of a step to the meshcloud API'
-
 ### inputs:
-- `base_url`: (required) The base URL for the API
-- `bb_run_uuid`: (required) The Building Block Run UUID
 - `step_id`: (required) The ID of the step
 - `status`: (required) The status of the step (SUCCEEDED or FAILED)
 - `user_message`: (optional) The user message for a failed step
 - `system_message`: (optional) The system message for a failed step
-- `token`: (required) The API token for authentication
 - `is_final`: (optional) Indicates if this is the final status report (default: 'false')
 - `summary`: (optional) The summary message for the final status report
 
 ## Example Usage
 
 ```yaml
-name: Send Status to meshcloud API
+- name: Setup meshStack bbrun
+  id: setup-meshstack-auth
+  uses: meshcloud/actions-register-source@main
+  with:
+    client_id: ${{ vars.BUILDINGBLOCK_API_CLIENT_ID }}
+    key_secret: ${{ secrets.BUILDINGBLOCK_API_KEY_SECRET }}
+    steps: |
+      [
+        { "id": "terraform-validate", "displayName": "terraform validate" },
+        { "id": "terraform-plan", "displayName": "terraform plan" },
+        { "id": "terraform-apply", "displayName": "terraform apply" }
+      ] 
 
-on: [push]
+- name: Terragrunt validate
+  id: terraform-validate
+  run: terraform validate
 
-jobs:
-  send-status:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
-
-    - name: Send Status
-      uses: ./  # Uses an action in the root directory
-      with:
-        base_url: 'https://mesh-backend-url'
-        bb_run_uuid: 'b3116611-e08b-4b00-91c5-10365b25a6ef'
-        step_id: 'step1'
-        status: 'SUCCEEDED'
-        token: ${{ secrets.API_TOKEN }}
-        is_final: 'true'
-        summary: 'A summary of the run.'
+- name: Send status on validate
+  if: ${{ steps.terraform-validate.outcome == 'success' }}
+  uses: meshcloud/actions-send-status@main
+  with:
+    step_id: "terraform-validate"
+    status: ${{ steps.terraform-validate.outcome == 'success' && 'SUCCEEDED' || 'FAILED' }} 
+    user_message: ${{ steps.terraform-validate.outcome == 'success' && 'Successful plan Terraform configuration.' || 'Failed to plan Terraform configuration.' }}
+    system_message:  ${{ steps.terraform-validate.outcome == 'success' && 'Successful plan Terraform configuration.' || 'Failed to plan Terraform configuration.' }}
 ```
