@@ -48,6 +48,9 @@ async function run() {
       return;
     }
 
+    core.debug(`Constructed data object: ${JSON.stringify(data)}`);
+    console.log(`Constructed data object: ${JSON.stringify(data)}`);
+
     const data: any = {
       status: isFinal ? status : "IN_PROGRESS",
       steps: [{
