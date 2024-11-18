@@ -50,13 +50,16 @@ async function run() {
 
     const data: any = {
       status: finalStatus ? finalStatus : "IN_PROGRESS",
-      steps: [{
+      summary: summary
+    };
+
+    if (stepId) {
+      data.steps = [{
         id: stepId,
         status: status,
         userMessage: userMessage,
         systemMessage: systemMessage
-      }],
-      summary: summary
+      }]
     };
 
     core.debug(`Constructed data object: ${JSON.stringify(data)}`);

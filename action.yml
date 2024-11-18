@@ -3,10 +3,10 @@ description: 'Sends the status of a step to the meshcloud API'
 inputs:
   step_id:
     description: 'The ID of the step'
-    required: true
+    required: false
   status:
     description: 'The status of the step (SUCCEEDED or FAILED)'
-    required: true
+    required: false
   user_message:
     description: 'The user message for a failed step'
     required: false
