@@ -28021,8 +28021,8 @@ async function run() {
         const status = core.getInput('status');
         const userMessage = core.getInput('user_message');
         const systemMessage = core.getInput('system_message');
-        const isFinal = core.getInput('is_final') === 'true';
         const summary = core.getInput('summary');
+        const finalStatus = core.getInput('final_status');
         const tempDir = process.env.RUNNER_TEMP || os.tmpdir();
         core.debug(`Temporary directory: ${tempDir}`);
         console.log(`Temporary directory: ${tempDir}`); // This will also print the path to the console
@@ -28053,17 +28053,18 @@ async function run() {
             return;
         }
         const data = {
-            status: isFinal ? status : "IN_PROGRESS",
-            steps: [{
+            status: finalStatus ? finalStatus : "IN_PROGRESS",
+            summary: summary
+        };
+        if (stepId) {
+            data.steps = [{
                     id: stepId,
                     status: status,
                     userMessage: userMessage,
                     systemMessage: systemMessage
-                }]
-        };
-        if (isFinal) {
-            data.summary = summary;
+                }];
         }
+        ;
         core.debug(`Constructed data object: ${JSON.stringify(data)}`);
         console.log(`Constructed data object: ${JSON.stringify(data)}`);
         const response = await axios_1.default.patch(`${baseUrl}/api/meshobjects/meshbuildingblockruns/${bbRunUuid}/status/source/github`, data, {
