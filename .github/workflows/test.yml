@@ -34,7 +34,6 @@ jobs:
           status: 'SUCCESS'
           user_message: 'User message'
           system_message: 'System message'
-          is_final: 'true'
           summary: 'Summary message'
 
       - name: Display temp directory

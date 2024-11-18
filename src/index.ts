@@ -13,8 +13,8 @@ async function run() {
     const status = core.getInput('status');
     const userMessage = core.getInput('user_message');
     const systemMessage = core.getInput('system_message');
-    const isFinal = core.getInput('is_final') === 'true';
     const summary = core.getInput('summary');
+    const finalStatus = core.getInput('final_status');
 
     const tempDir = process.env.RUNNER_TEMP || os.tmpdir();
     core.debug(`Temporary directory: ${tempDir}`);
@@ -49,18 +49,15 @@ async function run() {
     }
 
     const data: any = {
-      status: isFinal ? status : "IN_PROGRESS",
+      status: finalStatus ? finalStatus : "IN_PROGRESS",
       steps: [{
         id: stepId,
         status: status,
         userMessage: userMessage,
         systemMessage: systemMessage
-      }]
+      }],
+      summary: summary
     };
-
-    if (isFinal) {
-      data.summary = summary;
-    }
 
     core.debug(`Constructed data object: ${JSON.stringify(data)}`);
     console.log(`Constructed data object: ${JSON.stringify(data)}`);
