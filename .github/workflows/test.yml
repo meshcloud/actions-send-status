@@ -6,23 +6,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-
-      - name: Copy meshstack_token.json to temp directory
-        run: |
-          mkdir -p $RUNNER_TEMP
-          cp test_data/meshstack_token.json $RUNNER_TEMP/meshstack_token.json
-
       
       - name: Setup Meshstack Authentication
         id: setup-meshstack-auth 
-        uses: meshcloud/actions-register-source@main
+        uses: meshcloud/actions-meshstack-auth@main
         with:
-          steps: |
-            [
-              { "id": "terraform-validate", "displayName": "terraform validate" },
-              { "id": "terraform-plan", "displayName": "terraform plan" },
-              { "id": "terraform-apply", "displayName": "terraform apply" }
-            ]
+          base_url: https://federation.demo.meshcloud.io
           client_id: ${{ secrets.CLIENT_ID }}
           key_secret: ${{ secrets.KEY_SECRET }}
 
@@ -30,8 +19,7 @@ jobs:
         id: run-action
         uses: ./
         with:
-          step_id: 'terrafrom-validate'
-          status: 'SUCCESS'
+          final_status: "SUCCEEDED"
           user_message: 'User message'
           system_message: 'System message'
           summary: 'Summary message'
