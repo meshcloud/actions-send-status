@@ -14,7 +14,7 @@ inputs:
     description: 'The system message for a failed step'
     required: false
   final_status:
-    description: 'The final status is the run's end-state, combining all step outcomes into one status result based on your logic.'
+    description: 'The final status is the end-state of the run, combining all step outcomes into one status result based on your logic.'
     required: false
   summary:
     description: 'The summary message for the final status report'
