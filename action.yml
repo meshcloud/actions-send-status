@@ -17,9 +17,8 @@ inputs:
     description: 'The final status of the run. Sending this to a terminate status like SUCCEEDED or FAILED signals to meshStack that the run is complete. Send this only once.'
     required: false
   outputs_json:
-    description: 'A json objects with outputs of the step. All outputs in a run will be merged by meshStack.
+    description: 'A json objects with outputs of the step. All outputs in a run will be merged by meshStack.'
     required: false
 runs:
   using: 'node20'
   main: 'dist/index.js'
-
