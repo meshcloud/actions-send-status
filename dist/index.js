@@ -28013,6 +28013,20 @@ const axios_1 = __importDefault(__nccwpck_require__(8757));
 const fs = __importStar(__nccwpck_require__(7147));
 const path = __importStar(__nccwpck_require__(1017));
 const os = __importStar(__nccwpck_require__(2037));
+function parseAndValidateOutputsJson(input) {
+    try {
+        const parsed = JSON.parse(input);
+        if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+            throw new Error('outputs_json must be a valid JSON object');
+        }
+        return parsed;
+    }
+    catch (error) {
+        const errorMessage = `Invalid outputs_json provided: ${error instanceof Error ? error.message : 'Unknown parsing error'}. Input was: ${input}`;
+        core.error(errorMessage);
+        throw new Error(errorMessage);
+    }
+}
 async function run() {
     try {
         let baseUrl;
@@ -28022,7 +28036,15 @@ async function run() {
         const userMessage = core.getInput('user_message');
         const systemMessage = core.getInput('system_message');
         const runStatus = core.getInput('run_status');
-        const outputsJson = core.getInput('outputs_json');
+        const outputsJsonInput = core.getInput('outputs_json');
+        let outputsJson;
+        try {
+            outputsJson = parseAndValidateOutputsJson(outputsJsonInput);
+        }
+        catch (error) {
+            core.setFailed(error instanceof Error ? error.message : 'Unknown error occurred while parsing outputs_json');
+            return;
+        }
         const tempDir = process.env.RUNNER_TEMP || os.tmpdir();
         core.debug(`Temporary directory: ${tempDir}`);
         console.log(`Temporary directory: ${tempDir}`); // This will also print the path to the console
@@ -28061,7 +28083,7 @@ async function run() {
                     status: stepStatus,
                     userMessage: userMessage,
                     systemMessage: systemMessage,
-                    outputs: outputsJson && JSON.parse(outputsJson)
+                    outputs: outputsJson
                 }];
         }
         ;

@@ -4,6 +4,21 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
+function parseAndValidateOutputsJson(input: string): object {
+  try {
+    const parsed = JSON.parse(input);
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      throw new Error('outputs_json must be a valid JSON object');
+    }
+
+    return parsed;
+  } catch (error) {
+    const errorMessage = `Invalid outputs_json provided: ${error instanceof Error ? error.message : 'Unknown parsing error'}. Input was: ${input}`;
+    core.error(errorMessage);
+    throw new Error(errorMessage);
+  }
+}
+
 async function run() {
   try {
     let baseUrl: string;
@@ -14,7 +29,15 @@ async function run() {
     const userMessage = core.getInput('user_message');
     const systemMessage = core.getInput('system_message');
     const runStatus = core.getInput('run_status');
-    const outputsJson = core.getInput('outputs_json');
+    const outputsJsonInput = core.getInput('outputs_json')
+
+    let outputsJson: object;
+    try {
+      outputsJson = parseAndValidateOutputsJson(outputsJsonInput);
+    } catch (error) {
+      core.setFailed(error instanceof Error ? error.message : 'Unknown error occurred while parsing outputs_json');
+      return;
+    }
 
     const tempDir = process.env.RUNNER_TEMP || os.tmpdir();
     core.debug(`Temporary directory: ${tempDir}`);
@@ -58,7 +81,7 @@ async function run() {
         status: stepStatus,
         userMessage: userMessage,
         systemMessage: systemMessage,
-        outputs: outputsJson && JSON.parse(outputsJson)
+        outputs: outputsJson
       }]
     };
 

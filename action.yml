@@ -19,6 +19,7 @@ inputs:
   outputs_json:
     description: 'A json objects with outputs of the step. All outputs in a run will be merged by meshStack.'
     required: false
+    default: '{}'
 runs:
   using: 'node20'
   main: 'dist/index.js'
