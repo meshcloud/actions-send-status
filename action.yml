@@ -4,8 +4,8 @@ inputs:
   step_id:
     description: 'The ID of the step'
     required: false
-  status:
-    description: 'The status of the step (SUCCEEDED or FAILED)'
+  step_status:
+    description: 'The status of the step (IN_PROGRESS, SUCCEEDED or FAILED)'
     required: false
   user_message:
     description: 'The user message for a failed step'
@@ -13,12 +13,11 @@ inputs:
   system_message:
     description: 'The system message for a failed step'
     required: false
-  final_status:
-    description: 'The final status is the end-state of the run, combining all step outcomes into one status result based on your logic.'
+  run_status:
+    description: 'The final status of the run. Sending this to a terminate status like SUCCEEDED or FAILED signals to meshStack that the run is complete. Send this only once.'
     required: false
-  summary:
-    description: 'The summary message for the final status report'
-    required: false
+  outputs:_json:
+    description: 'A json objects with outputs of the step. All outputs in a run will be merged by meshStack.
 runs:
   using: 'node20'
   main: 'dist/index.js'

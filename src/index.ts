@@ -10,11 +10,11 @@ async function run() {
     let bbRunUuid: string;
 
     const stepId = core.getInput('step_id');
-    const status = core.getInput('status');
+    const stepStatus = core.getInput('step_status');
     const userMessage = core.getInput('user_message');
     const systemMessage = core.getInput('system_message');
-    const summary = core.getInput('summary');
-    const finalStatus = core.getInput('final_status');
+    const runStatus = core.getInput('run_status');
+    const outputsJson = core.getInput('outputs_json');
 
     const tempDir = process.env.RUNNER_TEMP || os.tmpdir();
     core.debug(`Temporary directory: ${tempDir}`);
@@ -49,16 +49,16 @@ async function run() {
     }
 
     const data: any = {
-      status: finalStatus ? finalStatus : "IN_PROGRESS",
-      summary: summary
+      status: runStatus ? runStatus : "IN_PROGRESS",
     };
 
     if (stepId) {
       data.steps = [{
         id: stepId,
-        status: status,
+        status: stepStatus,
         userMessage: userMessage,
-        systemMessage: systemMessage
+        systemMessage: systemMessage,
+        outputs: outputsJson && JSON.parse(outputsJson)
       }]
     };
 
