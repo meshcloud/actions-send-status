@@ -81,6 +81,10 @@ async function run() {
   } catch (error) {
     if (error instanceof Error) {
       core.setFailed(error.message);
+      if ((error as any).response) {
+        core.error(`API response status: ${(error as any).response.status}`);
+        core.error(`API response data: ${JSON.stringify((error as any).response.data)}`);
+      }
     } else {
       core.setFailed('An unknown error occurred');
     }
