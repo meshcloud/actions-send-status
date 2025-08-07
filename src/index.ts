@@ -16,9 +16,6 @@ async function run() {
     const runStatus = core.getInput('run_status');
     const outputsJson = core.getInput('outputs_json');
 
-    console.log(`Step ID: ${stepId}`);
-    console.log(`Step Status: ${stepStatus}`);
-
     const tempDir = process.env.RUNNER_TEMP || os.tmpdir();
     core.debug(`Temporary directory: ${tempDir}`);
     console.log(`Temporary directory: ${tempDir}`); // This will also print the path to the console

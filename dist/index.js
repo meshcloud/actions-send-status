@@ -28018,11 +28018,11 @@ async function run() {
         let baseUrl;
         let bbRunUuid;
         const stepId = core.getInput('step_id');
-        const status = core.getInput('status');
+        const stepStatus = core.getInput('step_status');
         const userMessage = core.getInput('user_message');
         const systemMessage = core.getInput('system_message');
-        const summary = core.getInput('summary');
-        const finalStatus = core.getInput('final_status');
+        const runStatus = core.getInput('run_status');
+        const outputsJson = core.getInput('outputs_json');
         const tempDir = process.env.RUNNER_TEMP || os.tmpdir();
         core.debug(`Temporary directory: ${tempDir}`);
         console.log(`Temporary directory: ${tempDir}`); // This will also print the path to the console
@@ -28053,15 +28053,15 @@ async function run() {
             return;
         }
         const data = {
-            status: finalStatus ? finalStatus : "IN_PROGRESS",
-            summary: summary
+            status: runStatus ? runStatus : "IN_PROGRESS",
         };
         if (stepId) {
             data.steps = [{
                     id: stepId,
-                    status: status,
+                    status: stepStatus,
                     userMessage: userMessage,
-                    systemMessage: systemMessage
+                    systemMessage: systemMessage,
+                    outputs: outputsJson && JSON.parse(outputsJson)
                 }];
         }
         ;
@@ -28079,6 +28079,10 @@ async function run() {
     catch (error) {
         if (error instanceof Error) {
             core.setFailed(error.message);
+            if (error.response) {
+                core.error(`API response status: ${error.response.status}`);
+                core.error(`API response data: ${JSON.stringify(error.response.data)}`);
+            }
         }
         else {
             core.setFailed('An unknown error occurred');
