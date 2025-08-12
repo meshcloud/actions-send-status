@@ -4,17 +4,40 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
+function parseAndValidateOutputsJson(input: string): object {
+  try {
+    const parsed = JSON.parse(input);
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      throw new Error('outputs_json must be a valid JSON object');
+    }
+
+    return parsed;
+  } catch (error) {
+    const errorMessage = `Invalid outputs_json provided: ${error instanceof Error ? error.message : 'Unknown parsing error'}. Input was: ${input}`;
+    core.error(errorMessage);
+    throw new Error(errorMessage);
+  }
+}
+
 async function run() {
   try {
     let baseUrl: string;
     let bbRunUuid: string;
 
     const stepId = core.getInput('step_id');
-    const status = core.getInput('status');
+    const stepStatus = core.getInput('step_status');
     const userMessage = core.getInput('user_message');
     const systemMessage = core.getInput('system_message');
-    const summary = core.getInput('summary');
-    const finalStatus = core.getInput('final_status');
+    const runStatus = core.getInput('run_status');
+    const outputsJsonInput = core.getInput('outputs_json')
+
+    let outputsJson: object;
+    try {
+      outputsJson = parseAndValidateOutputsJson(outputsJsonInput);
+    } catch (error) {
+      core.setFailed(error instanceof Error ? error.message : 'Unknown error occurred while parsing outputs_json');
+      return;
+    }
 
     const tempDir = process.env.RUNNER_TEMP || os.tmpdir();
     core.debug(`Temporary directory: ${tempDir}`);
@@ -49,16 +72,16 @@ async function run() {
     }
 
     const data: any = {
-      status: finalStatus ? finalStatus : "IN_PROGRESS",
-      summary: summary
+      status: runStatus ? runStatus : "IN_PROGRESS",
     };
 
     if (stepId) {
       data.steps = [{
         id: stepId,
-        status: status,
+        status: stepStatus,
         userMessage: userMessage,
-        systemMessage: systemMessage
+        systemMessage: systemMessage,
+        outputs: outputsJson
       }]
     };
 
@@ -81,6 +104,10 @@ async function run() {
   } catch (error) {
     if (error instanceof Error) {
       core.setFailed(error.message);
+      if ((error as any).response) {
+        core.error(`API response status: ${(error as any).response.status}`);
+        core.error(`API response data: ${JSON.stringify((error as any).response.data)}`);
+      }
     } else {
       core.setFailed('An unknown error occurred');
     }

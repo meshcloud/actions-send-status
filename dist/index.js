@@ -28013,16 +28013,38 @@ const axios_1 = __importDefault(__nccwpck_require__(8757));
 const fs = __importStar(__nccwpck_require__(7147));
 const path = __importStar(__nccwpck_require__(1017));
 const os = __importStar(__nccwpck_require__(2037));
+function parseAndValidateOutputsJson(input) {
+    try {
+        const parsed = JSON.parse(input);
+        if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+            throw new Error('outputs_json must be a valid JSON object');
+        }
+        return parsed;
+    }
+    catch (error) {
+        const errorMessage = `Invalid outputs_json provided: ${error instanceof Error ? error.message : 'Unknown parsing error'}. Input was: ${input}`;
+        core.error(errorMessage);
+        throw new Error(errorMessage);
+    }
+}
 async function run() {
     try {
         let baseUrl;
         let bbRunUuid;
         const stepId = core.getInput('step_id');
-        const status = core.getInput('status');
+        const stepStatus = core.getInput('step_status');
         const userMessage = core.getInput('user_message');
         const systemMessage = core.getInput('system_message');
-        const summary = core.getInput('summary');
-        const finalStatus = core.getInput('final_status');
+        const runStatus = core.getInput('run_status');
+        const outputsJsonInput = core.getInput('outputs_json');
+        let outputsJson;
+        try {
+            outputsJson = parseAndValidateOutputsJson(outputsJsonInput);
+        }
+        catch (error) {
+            core.setFailed(error instanceof Error ? error.message : 'Unknown error occurred while parsing outputs_json');
+            return;
+        }
         const tempDir = process.env.RUNNER_TEMP || os.tmpdir();
         core.debug(`Temporary directory: ${tempDir}`);
         console.log(`Temporary directory: ${tempDir}`); // This will also print the path to the console
@@ -28053,15 +28075,15 @@ async function run() {
             return;
         }
         const data = {
-            status: finalStatus ? finalStatus : "IN_PROGRESS",
-            summary: summary
+            status: runStatus ? runStatus : "IN_PROGRESS",
         };
         if (stepId) {
             data.steps = [{
                     id: stepId,
-                    status: status,
+                    status: stepStatus,
                     userMessage: userMessage,
-                    systemMessage: systemMessage
+                    systemMessage: systemMessage,
+                    outputs: outputsJson
                 }];
         }
         ;
@@ -28079,6 +28101,10 @@ async function run() {
     catch (error) {
         if (error instanceof Error) {
             core.setFailed(error.message);
+            if (error.response) {
+                core.error(`API response status: ${error.response.status}`);
+                core.error(`API response data: ${JSON.stringify(error.response.data)}`);
+            }
         }
         else {
             core.setFailed('An unknown error occurred');
