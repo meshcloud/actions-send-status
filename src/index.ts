@@ -1,127 +1,55 @@
 import * as core from '@actions/core';
-import axios from 'axios';
-import * as fs from 'fs';
-import * as path from 'path';
 import * as os from 'os';
+import { makeRequest, readTokenFromFile } from './api';
+import { ActionInputs, readInputs } from './inputs';
 
-function parseAndValidateOutputsJson(input: string): object {
-  try {
-    const parsed = JSON.parse(input);
-    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-      throw new Error('outputs_json must be a valid JSON object');
-    }
+export function constructRequestData(inputs: ActionInputs): any {
+  const data: any = {
+    status: inputs.runStatus ? inputs.runStatus : "IN_PROGRESS",
+  };
 
-    return parsed;
-  } catch (error) {
-    const errorMessage = `Invalid outputs_json provided: ${error instanceof Error ? error.message : 'Unknown parsing error'}. Input was: ${input}`;
-    core.error(errorMessage);
-    throw new Error(errorMessage);
+  if (inputs.stepId) {
+    data.steps = [{
+      id: inputs.stepId,
+      status: inputs.stepStatus,
+      userMessage: inputs.userMessage,
+      systemMessage: inputs.systemMessage,
+      outputs: inputs.outputs
+    }];
   }
+
+  return data;
 }
 
-async function run() {
+export async function run() {
   try {
-    let baseUrl: string;
-    let bbRunUuid: string;
-
-    const stepId = core.getInput('step_id');
-    const stepStatus = core.getInput('step_status');
-    const userMessage = core.getInput('user_message');
-    const systemMessage = core.getInput('system_message');
-    const runStatus = core.getInput('run_status');
-    const outputsJsonInput = core.getInput('outputs_json')
-
-    let outputsJson: object;
-    try {
-      outputsJson = parseAndValidateOutputsJson(outputsJsonInput);
-    } catch (error) {
-      core.setFailed(error instanceof Error ? error.message : 'Unknown error occurred while parsing outputs_json');
-      return;
-    }
-
-    // outputs default to {}, only if an actual output is set we need to make sure we have a stepId
-    const hasOutputs = outputsJsonInput && !Object.keys(outputsJson).length;
-
-    // when the user attempst to only resolve the run, provide a failure message
-    if ((stepStatus || userMessage || systemMessage || hasOutputs) && !stepId) {
-      core.setFailed('step_id must be provided when setting step_status, user_message, system_message, or outputs_json');
-      return;
-    }
+    const inputs = readInputs();
 
     const tempDir = process.env.RUNNER_TEMP || os.tmpdir();
-    core.debug(`Temporary directory: ${tempDir}`);
-    console.log(`Temporary directory: ${tempDir}`); // This will also print the path to the console
+    const token = readTokenFromFile(tempDir);
 
-    // Set the temporary directory path as an output
-    core.setOutput('temp_directory', tempDir);
+    const data = constructRequestData(inputs);
 
-    let token;
-    try {
-      const tokenFilePath = path.join(tempDir, 'meshstack_token.json');
-      core.debug(`Token file path: ${tokenFilePath}`);
-      console.log(`Token file path: ${tokenFilePath}`);
-
-      if (!fs.existsSync(tokenFilePath)) {
-        throw new Error('Token file does not exist');
-      }
-
-      const tokenData = JSON.parse(fs.readFileSync(tokenFilePath, 'utf8'));
-      token = tokenData.token;
-      bbRunUuid = tokenData.bbRunUuid;
-      baseUrl = tokenData.baseUrl;
-      core.debug(`Token successfully read from file: ${tokenFilePath}`);
-      console.log(`Token successfully read from file: ${tokenFilePath}`);
-    } catch (error) {
-      if (error instanceof Error) {
-        core.setFailed(`Failed to read token from file at ${path.join(tempDir, 'meshstack_token.json')}: ${error.message}`);
-      } else {
-        core.setFailed('Failed to read token from file: An unknown error occurred');
-      }
-      return;
-    }
-
-    const data: any = {
-      status: runStatus ? runStatus : "IN_PROGRESS",
-    };
-
-    if (stepId) {
-      data.steps = [{
-        id: stepId,
-        status: stepStatus,
-        userMessage: userMessage,
-        systemMessage: systemMessage,
-        outputs: outputsJson
-      }]
-    };
-
-    core.debug(`Constructed data object: ${JSON.stringify(data)}`);
-    console.log(`Constructed data object: ${JSON.stringify(data)}`);
-
-    const response = await axios.patch(
-      `${baseUrl}/api/meshobjects/meshbuildingblockruns/${bbRunUuid}/status/source/github`,
-      data,
-      {
-        headers: {
-          'Content-Type': 'application/vnd.meshcloud.api.meshbuildingblockrun.v1.hal+json',
-          'Accept': 'application/vnd.meshcloud.api.meshbuildingblockrun.v1.hal+json',
-          'Authorization': `Bearer ${token}`
-        }
-      }
-    );
-
-    core.setOutput('response', response.data);
-  } catch (error) {
+    const response = makeRequest(token, data);
+    core.setOutput('response', response);
+  }
+  catch (error) {
     if (error instanceof Error) {
       core.setFailed(error.message);
-      if ((error as any).response) {
-        core.error(`API response status: ${(error as any).response.status}`);
-        core.error(`API response data: ${JSON.stringify((error as any).response.data)}`);
+      const response = (error as any).response;
+      if (response) {
+        core.error(`API response status: ${response.status}`);
+        core.error(`API response data: ${JSON.stringify(response.data)}`);
       }
     } else {
-      core.setFailed('An unknown error occurred');
+      core.setFailed('An unknown error occurred: ${error}');
     }
   }
 }
 
-run();
+
+// Only run if this file is executed directly (not imported for testing)
+if (require.main === module) {
+  run();
+}
 
