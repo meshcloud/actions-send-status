@@ -28045,8 +28045,10 @@ async function run() {
             core.setFailed(error instanceof Error ? error.message : 'Unknown error occurred while parsing outputs_json');
             return;
         }
+        // outputs default to {}, only if an actual output is set we need to make sure we have a stepId
+        const hasOutputs = outputsJsonInput && !Object.keys(outputsJson).length;
         // when the user attempst to only resolve the run, provide a failure message
-        if ((stepStatus || userMessage || systemMessage || outputsJsonInput) && !stepId) {
+        if ((stepStatus || userMessage || systemMessage || hasOutputs) && !stepId) {
             core.setFailed('step_id must be provided when setting step_status, user_message, system_message, or outputs_json');
             return;
         }
