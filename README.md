@@ -42,9 +42,9 @@ Besides a status, meshStack can also show custom user messages consuming the ser
 - `step_status`: (required) The status of the step (SUCCEEDED or FAILED)
 - `user_message`: (optional) The user message for a failed step
 - `system_message`: (optional) The system message for a failed step
-- `outputs_json`: (optional) A JSON object with outputs of the step. All step outputs in a run will be merged by 
+- `outputs_json`: (optional) A JSON object with outputs of the step. All step outputs in a run will be merged by meshStack to produce the run outputs. See the [API documentation](https://docs.meshcloud.io/api/index.html#_update_sources_and_steps) for more details on how to use this field.
 - `run_status`: (optional) Indicates if this is the final status report (default: 'false')
-meshStack to produce the run outputs. See the [API documentation](https://docs.meshcloud.io/api/index.html#_update_sources_and_steps) for more details on how to use this field.
+
 
 ## Example Usage
 
@@ -71,7 +71,7 @@ meshStack to produce the run outputs. See the [API documentation](https://docs.m
   uses: meshcloud/actions-send-status@main
   with:
     step_id: "terraform-validate"
-    status: ${{ steps.terraform-validate.outcome == 'success' && 'SUCCEEDED' || 'FAILED' }} 
+    step_status: ${{ steps.terraform-validate.outcome == 'success' && 'SUCCEEDED' || 'FAILED' }} 
     user_message: ${{ steps.terraform-validate.outcome == 'success' && 'Successful plan Terraform configuration.' || 'Failed to plan Terraform configuration.' }}
     system_message:  ${{ steps.terraform-validate.outcome == 'success' && 'Successful plan Terraform configuration.' || 'Failed to plan Terraform configuration.' }}
 ```
