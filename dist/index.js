@@ -28045,6 +28045,11 @@ async function run() {
             core.setFailed(error instanceof Error ? error.message : 'Unknown error occurred while parsing outputs_json');
             return;
         }
+        // when the user attempst to only resolve the run, provide a failure message
+        if ((stepStatus || userMessage || systemMessage || outputsJsonInput) && !stepId) {
+            core.setFailed('step_id must be provided when setting step_status, user_message, system_message, or outputs_json');
+            return;
+        }
         const tempDir = process.env.RUNNER_TEMP || os.tmpdir();
         core.debug(`Temporary directory: ${tempDir}`);
         console.log(`Temporary directory: ${tempDir}`); // This will also print the path to the console
