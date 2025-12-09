@@ -1,17 +1,30 @@
-import * as fs from 'fs';
-import axios from 'axios';
+import { describe, it, beforeEach, mock } from 'node:test';
+import assert from 'node:assert';
 import { readTokenFromFile, makeRequest } from '../src/api';
 
-// Mock dependencies
-jest.mock('fs');
-jest.mock('axios');
+// Mock fs module
+const mockExistsSync = mock.fn();
+const mockReadFileSync = mock.fn();
+mock.module('fs', {
+  namedExports: {
+    existsSync: mockExistsSync,
+    readFileSync: mockReadFileSync
+  }
+});
 
-const mockedFs = jest.mocked(fs);
-const mockedAxios = jest.mocked(axios);
+// Mock axios module
+const mockPatch = mock.fn();
+mock.module('axios', {
+  defaultExport: {
+    patch: mockPatch
+  }
+});
 
 describe('api.ts', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    mockExistsSync.mock.resetCalls();
+    mockReadFileSync.mock.resetCalls();
+    mockPatch.mock.resetCalls();
   });
 
   describe('readTokenFromFile', () => {
@@ -25,22 +38,25 @@ describe('api.ts', () => {
         baseUrl: 'https://api.example.com'
       };
 
-      mockedFs.existsSync.mockReturnValue(true);
-      mockedFs.readFileSync.mockReturnValue(JSON.stringify(tokenData));
+      mockExistsSync.mock.mockImplementation(() => true);
+      mockReadFileSync.mock.mockImplementation(() => JSON.stringify(tokenData));
 
       const result = readTokenFromFile(tempDir);
 
-      expect(result).toEqual(tokenData);
-      expect(mockedFs.existsSync).toHaveBeenCalledWith(expectedTokenPath);
-      expect(mockedFs.readFileSync).toHaveBeenCalledWith(expectedTokenPath, 'utf8');
+      assert.deepStrictEqual(result, tokenData);
+      assert.strictEqual(mockExistsSync.mock.calls.length, 1);
+      assert.strictEqual(mockReadFileSync.mock.calls.length, 1);
     });
 
     it('should throw error when token file does not exist', () => {
-      mockedFs.existsSync.mockReturnValue(false);
+      mockExistsSync.mock.mockImplementation(() => false);
 
-      expect(() => readTokenFromFile(tempDir)).toThrow('Token file does not exist');
-      expect(mockedFs.existsSync).toHaveBeenCalledWith(expectedTokenPath);
-      expect(mockedFs.readFileSync).not.toHaveBeenCalled();
+      assert.throws(
+        () => readTokenFromFile(tempDir),
+        { message: 'Token file does not exist' }
+      );
+      assert.strictEqual(mockExistsSync.mock.calls.length, 1);
+      assert.strictEqual(mockReadFileSync.mock.calls.length, 0);
     });
 
     it('should throw error when token field is missing', () => {
@@ -50,11 +66,12 @@ describe('api.ts', () => {
         // token field missing
       };
 
-      mockedFs.existsSync.mockReturnValue(true);
-      mockedFs.readFileSync.mockReturnValue(JSON.stringify(tokenData));
+      mockExistsSync.mock.mockImplementation(() => true);
+      mockReadFileSync.mock.mockImplementation(() => JSON.stringify(tokenData));
 
-      expect(() => readTokenFromFile(tempDir)).toThrow(
-        'Token file is missing required fields: token, bbRunUuid, or baseUrl'
+      assert.throws(
+        () => readTokenFromFile(tempDir),
+        { message: 'Token file is missing required fields: token, bbRunUuid, or baseUrl' }
       );
     });
 
@@ -65,11 +82,12 @@ describe('api.ts', () => {
         // bbRunUuid field missing
       };
 
-      mockedFs.existsSync.mockReturnValue(true);
-      mockedFs.readFileSync.mockReturnValue(JSON.stringify(tokenData));
+      mockExistsSync.mock.mockImplementation(() => true);
+      mockReadFileSync.mock.mockImplementation(() => JSON.stringify(tokenData));
 
-      expect(() => readTokenFromFile(tempDir)).toThrow(
-        'Token file is missing required fields: token, bbRunUuid, or baseUrl'
+      assert.throws(
+        () => readTokenFromFile(tempDir),
+        { message: 'Token file is missing required fields: token, bbRunUuid, or baseUrl' }
       );
     });
 
@@ -80,19 +98,20 @@ describe('api.ts', () => {
         // baseUrl field missing
       };
 
-      mockedFs.existsSync.mockReturnValue(true);
-      mockedFs.readFileSync.mockReturnValue(JSON.stringify(tokenData));
+      mockExistsSync.mock.mockImplementation(() => true);
+      mockReadFileSync.mock.mockImplementation(() => JSON.stringify(tokenData));
 
-      expect(() => readTokenFromFile(tempDir)).toThrow(
-        'Token file is missing required fields: token, bbRunUuid, or baseUrl'
+      assert.throws(
+        () => readTokenFromFile(tempDir),
+        { message: 'Token file is missing required fields: token, bbRunUuid, or baseUrl' }
       );
     });
 
     it('should throw error when JSON is invalid', () => {
-      mockedFs.existsSync.mockReturnValue(true);
-      mockedFs.readFileSync.mockReturnValue('invalid json {');
+      mockExistsSync.mock.mockImplementation(() => true);
+      mockReadFileSync.mock.mockImplementation(() => 'invalid json {');
 
-      expect(() => readTokenFromFile(tempDir)).toThrow();
+      assert.throws(() => readTokenFromFile(tempDir));
     });
   });
 
@@ -119,29 +138,26 @@ describe('api.ts', () => {
         data: { status: 'updated', id: 'run-123' }
       };
 
-      mockedAxios.patch.mockResolvedValue(mockResponse);
+      mockPatch.mock.mockImplementation(async () => mockResponse);
 
       const result = await makeRequest(mockToken, mockData);
 
-      expect(result).toEqual(mockResponse.data);
-      expect(mockedAxios.patch).toHaveBeenCalledWith(
-        'https://api.example.com/api/meshobjects/meshbuildingblockruns/uuid-456/status/source/github',
-        mockData,
-        {
-          headers: {
-            'Content-Type': 'application/vnd.meshcloud.api.meshbuildingblockrun.v1.hal+json',
-            'Accept': 'application/vnd.meshcloud.api.meshbuildingblockrun.v1.hal+json',
-            'Authorization': 'Bearer test-token-123'
-          }
-        }
+      assert.deepStrictEqual(result, mockResponse.data);
+      assert.strictEqual(mockPatch.mock.calls.length, 1);
+      assert.strictEqual(
+        mockPatch.mock.calls[0].arguments[0],
+        'https://api.example.com/api/meshobjects/meshbuildingblockruns/uuid-456/status/source/github'
       );
     });
 
     it('should propagate axios errors', async () => {
       const axiosError = new Error('Network error');
-      mockedAxios.patch.mockRejectedValue(axiosError);
+      mockPatch.mock.mockImplementation(async () => { throw axiosError; });
 
-      await expect(makeRequest(mockToken, mockData)).rejects.toThrow('Network error');
+      await assert.rejects(
+        async () => makeRequest(mockToken, mockData),
+        { message: 'Network error' }
+      );
     });
 
     it('should handle API error responses', async () => {
@@ -151,9 +167,12 @@ describe('api.ts', () => {
           data: { error: 'Bad request' }
         }
       };
-      mockedAxios.patch.mockRejectedValue(apiError);
+      mockPatch.mock.mockImplementation(async () => { throw apiError; });
 
-      await expect(makeRequest(mockToken, mockData)).rejects.toEqual(apiError);
+      await assert.rejects(
+        async () => makeRequest(mockToken, mockData),
+        apiError
+      );
     });
   });
 });

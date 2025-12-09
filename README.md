@@ -2,7 +2,7 @@
 
 This GitHub Action helps you send the status back to your buildinbblock-run in meshStack.
 
-Before using this action, set up authentication to Meshstack with the [meshcloud/actions-register-source](https://github.com/meshcloud/actions-register-source) action. This action logs in to Meshstack and registers the source of the run.
+Before using this action, set up authentication to meshStack with the [meshcloud/actions-register-source](https://github.com/meshcloud/actions-register-source) action. This action logs in to meshStack and registers the source of the run.
 
 ## Overview
 
