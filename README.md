@@ -1,43 +1,49 @@
-# actions-send-status
+# meshStack Send Status Action
 
-This GitHub Action helps you send the status back to your buildinbblock-run in meshStack.
+This GitHub Action sends building block step status updates back to meshStack.
 
-Before using this action, set up authentication to meshStack with the [meshcloud/actions-register-source](https://github.com/meshcloud/actions-register-source) action. This action logs in to meshStack and registers the source of the run.
+Before using this action, set up authentication to meshStack with the [meshcloud/actions-meshstack-auth](https://github.com/meshcloud/actions-meshstack-auth) action and register the source with [meshcloud/actions-register-source](https://github.com/meshcloud/actions-register-source).
 
 ## Overview
 
-
-The meshStack Building Block pipeline allows you to automate and manage complex workflows by defining a series of steps that need to be executed. Each Building Block Run represents an instance of such a workflow. This GitHub Action helps you send the status of a step back to the registered source in the meshStack Building Block pipeline.
+The meshStack building block pipeline allows you to automate and manage complex workflows by defining a series of steps that need to be executed. Each building block run represents an instance of such a workflow. This GitHub Action helps you send the status of a step back to the registered source in the meshStack building block pipeline.
 
 In order to return updates for a run to meshStack, you first need to register one or multiple steps and their resources of your run execution. It is up to you how many or how you organize your steps. You can, however, also just send step results back and the registration takes place on the fly. But in order to have a consistent display and ordering of steps, it is highly advised to pre-register steps and sources.
 
-Before you can use this action, you need to use [actions-register-source](https://github.com/meshcloud/actions-register-source) to register the source.
+## Related Actions
 
+This action is part of a suite of GitHub Actions for meshStack building block automation:
 
-For more details on the meshBuildingBlockRun API, refer to the [meshcloud API documentation](https://docs.meshcloud.io/api/index.html#mesh_buildingblockrun).
+- **[actions-meshstack-auth](https://github.com/meshcloud/actions-meshstack-auth)** - Authenticates to the meshStack API (prerequisite for this action)
+- **[actions-register-source](https://github.com/meshcloud/actions-register-source)** - Registers building block sources and steps with meshStack (prerequisite for this action)
+- **[actions-send-status](https://github.com/meshcloud/actions-send-status)** (this action) - Sends building block step status updates to meshStack
 
-For more information on integrating with the meshStack Building Block pipeline, refer to the [meshStack Building Block pipeline integration documentation](https://docs.meshcloud.io/docs/meshstack.building-pipeline-integration.html#building-block-run-and-steps).
+## Documentation
+
+For more information about meshStack building blocks and GitHub Actions integration, refer to:
+- [meshStack GitHub Actions Integration](https://docs.meshcloud.io/integrations/github/github-actions/)
+- [meshStack API Documentation](https://docs.meshcloud.io/api/index.html#mesh_buildingblockrun)
 
 ## Building Block Run and Steps
 
-In meshStack, the execution of a Building Block from beginning till end is called a run. A run can have multiple steps. You have complete freedom about the granularity of information you share with your users.
+In meshStack, the execution of a building block from beginning till end is called a run. A run can have multiple steps. You have complete freedom about the granularity of information you share with your users.
 
 ## Available States for Runs and Steps
 
-meshStack comes with some defined statuses for Building Block runs and steps that provide users insights about the current situation. You can use them as you see fit. Available statuses are:
+meshStack comes with some defined statuses for building block runs and steps that provide users insights about the current situation. You can use them as you see fit. Available statuses are:
 
-- **IN_PROGRESS**: When a Building Block run has been started and is in progress
-- **SUCCEEDED**: When a Building Block run or step has been successfully completed
-- **FAILED**: When a Building Block run or step has failed to complete
-- **PENDING**: When a Building Block run has been started but is waiting for an external system
+- **IN_PROGRESS**: When a building block run has been started and is in progress
+- **SUCCEEDED**: When a building block run or step has been successfully completed
+- **FAILED**: When a building block run or step has failed to complete
+- **PENDING**: When a building block run has been started but is waiting for an external system
 
 Whenever a run was successful but meshStack did not receive a success for one or more steps, meshStack shows a warning to the operator and user.
 
 ## Operator and User Messages
 
-Besides a status, meshStack can also show custom user messages consuming the service and operator messages to the provider of the pipline run inside of meshStack. This can be used to provide more detailed information about the current state of the run.
+Besides a status, meshStack can also show custom user messages consuming the service and operator messages to the provider of the pipeline run inside of meshStack. This can be used to provide more detailed information about the current state of the run.
 
-### inputs:
+## Inputs
 - `step_id`: (required) The ID of the step
 - `step_status`: (required) The status of the step (SUCCEEDED or FAILED)
 - `user_message`: (optional) The user message for a failed step
