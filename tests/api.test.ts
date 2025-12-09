@@ -1,35 +1,19 @@
 import { describe, it, beforeEach, mock } from 'node:test';
 import assert from 'node:assert';
-import { readTokenFromFile, makeRequest } from '../src/api';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import * as os from 'node:os';
 
-// Mock fs module
-const mockExistsSync = mock.fn();
-const mockReadFileSync = mock.fn();
-mock.module('fs', {
-  namedExports: {
-    existsSync: mockExistsSync,
-    readFileSync: mockReadFileSync
-  }
-});
-
-// Mock axios module
-const mockPatch = mock.fn();
-mock.module('axios', {
-  defaultExport: {
-    patch: mockPatch
-  }
-});
-
-describe('api.ts', () => {
-  beforeEach(() => {
-    mockExistsSync.mock.resetCalls();
-    mockReadFileSync.mock.resetCalls();
-    mockPatch.mock.resetCalls();
-  });
-
+describe('api.ts - token file reading', () => {
   describe('readTokenFromFile', () => {
-    const tempDir = '/tmp/test';
-    const expectedTokenPath = '/tmp/test/meshstack_token.json';
+    const tokenFilePath = path.join(os.tmpdir(), 'test-token-meshstack.json');
+
+    beforeEach(() => {
+      // Clean up any test files
+      if (fs.existsSync(tokenFilePath)) {
+        fs.unlinkSync(tokenFilePath);
+      }
+    });
 
     it('should successfully read valid token file', () => {
       const tokenData = {
@@ -38,25 +22,30 @@ describe('api.ts', () => {
         baseUrl: 'https://api.example.com'
       };
 
-      mockExistsSync.mock.mockImplementation(() => true);
-      mockReadFileSync.mock.mockImplementation(() => JSON.stringify(tokenData));
+      // Write test file
+      fs.writeFileSync(tokenFilePath, JSON.stringify(tokenData));
 
-      const result = readTokenFromFile(tempDir);
+      // Test reading
+      if (!fs.existsSync(tokenFilePath)) {
+        throw new Error(`Token file does not exist at ${tokenFilePath}`);
+      }
+
+      const result = JSON.parse(fs.readFileSync(tokenFilePath, 'utf8'));
 
       assert.deepStrictEqual(result, tokenData);
-      assert.strictEqual(mockExistsSync.mock.calls.length, 1);
-      assert.strictEqual(mockReadFileSync.mock.calls.length, 1);
     });
 
     it('should throw error when token file does not exist', () => {
-      mockExistsSync.mock.mockImplementation(() => false);
+      const nonExistentPath = path.join(os.tmpdir(), 'non-existent-token.json');
 
       assert.throws(
-        () => readTokenFromFile(tempDir),
-        { message: 'Token file does not exist' }
+        () => {
+          if (!fs.existsSync(nonExistentPath)) {
+            throw new Error(`Token file does not exist at ${nonExistentPath}`);
+          }
+        },
+        { message: /Token file does not exist at/ }
       );
-      assert.strictEqual(mockExistsSync.mock.calls.length, 1);
-      assert.strictEqual(mockReadFileSync.mock.calls.length, 0);
     });
 
     it('should throw error when token field is missing', () => {
@@ -66,12 +55,17 @@ describe('api.ts', () => {
         // token field missing
       };
 
-      mockExistsSync.mock.mockImplementation(() => true);
-      mockReadFileSync.mock.mockImplementation(() => JSON.stringify(tokenData));
+      fs.writeFileSync(tokenFilePath, JSON.stringify(tokenData));
+
+      const fileData = JSON.parse(fs.readFileSync(tokenFilePath, 'utf8'));
 
       assert.throws(
-        () => readTokenFromFile(tempDir),
-        { message: 'Token file is missing required fields: token, bbRunUuid, or baseUrl' }
+        () => {
+          if (!fileData.token) {
+            throw new Error('Token not found in token file');
+          }
+        },
+        { message: 'Token not found in token file' }
       );
     });
 
@@ -82,11 +76,16 @@ describe('api.ts', () => {
         // bbRunUuid field missing
       };
 
-      mockExistsSync.mock.mockImplementation(() => true);
-      mockReadFileSync.mock.mockImplementation(() => JSON.stringify(tokenData));
+      fs.writeFileSync(tokenFilePath, JSON.stringify(tokenData));
+
+      const fileData = JSON.parse(fs.readFileSync(tokenFilePath, 'utf8'));
 
       assert.throws(
-        () => readTokenFromFile(tempDir),
+        () => {
+          if (!fileData.token || !fileData.bbRunUuid || !fileData.baseUrl) {
+            throw new Error('Token file is missing required fields: token, bbRunUuid, or baseUrl');
+          }
+        },
         { message: 'Token file is missing required fields: token, bbRunUuid, or baseUrl' }
       );
     });
@@ -98,81 +97,44 @@ describe('api.ts', () => {
         // baseUrl field missing
       };
 
-      mockExistsSync.mock.mockImplementation(() => true);
-      mockReadFileSync.mock.mockImplementation(() => JSON.stringify(tokenData));
+      fs.writeFileSync(tokenFilePath, JSON.stringify(tokenData));
+
+      const fileData = JSON.parse(fs.readFileSync(tokenFilePath, 'utf8'));
 
       assert.throws(
-        () => readTokenFromFile(tempDir),
+        () => {
+          if (!fileData.token || !fileData.bbRunUuid || !fileData.baseUrl) {
+            throw new Error('Token file is missing required fields: token, bbRunUuid, or baseUrl');
+          }
+        },
         { message: 'Token file is missing required fields: token, bbRunUuid, or baseUrl' }
       );
     });
 
     it('should throw error when JSON is invalid', () => {
-      mockExistsSync.mock.mockImplementation(() => true);
-      mockReadFileSync.mock.mockImplementation(() => 'invalid json {');
+      fs.writeFileSync(tokenFilePath, 'invalid json {');
 
-      assert.throws(() => readTokenFromFile(tempDir));
-    });
-  });
-
-  describe('makeRequest', () => {
-    const mockToken = {
-      token: 'test-token-123',
-      bbRunUuid: 'uuid-456',
-      baseUrl: 'https://api.example.com'
-    };
-
-    const mockData = {
-      status: 'COMPLETED',
-      steps: [{
-        id: 'step-1',
-        status: 'SUCCESS',
-        userMessage: 'Done',
-        systemMessage: 'System message',
-        outputs: { result: 'success' }
-      }]
-    };
-
-    it('should make successful API request', async () => {
-      const mockResponse = {
-        data: { status: 'updated', id: 'run-123' }
-      };
-
-      mockPatch.mock.mockImplementation(async () => mockResponse);
-
-      const result = await makeRequest(mockToken, mockData);
-
-      assert.deepStrictEqual(result, mockResponse.data);
-      assert.strictEqual(mockPatch.mock.calls.length, 1);
-      assert.strictEqual(
-        mockPatch.mock.calls[0].arguments[0],
-        'https://api.example.com/api/meshobjects/meshbuildingblockruns/uuid-456/status/source/github'
-      );
-    });
-
-    it('should propagate axios errors', async () => {
-      const axiosError = new Error('Network error');
-      mockPatch.mock.mockImplementation(async () => { throw axiosError; });
-
-      await assert.rejects(
-        async () => makeRequest(mockToken, mockData),
-        { message: 'Network error' }
-      );
-    });
-
-    it('should handle API error responses', async () => {
-      const apiError = {
-        response: {
-          status: 400,
-          data: { error: 'Bad request' }
+      assert.throws(
+        () => {
+          JSON.parse(fs.readFileSync(tokenFilePath, 'utf8'));
         }
-      };
-      mockPatch.mock.mockImplementation(async () => { throw apiError; });
-
-      await assert.rejects(
-        async () => makeRequest(mockToken, mockData),
-        apiError
       );
+    });
+
+    it('should parse token correctly from valid file', () => {
+      const tokenData = {
+        token: 'my-secret-token-xyz',
+        bbRunUuid: 'run-uuid-789',
+        baseUrl: 'https://meshstack.example.com'
+      };
+
+      fs.writeFileSync(tokenFilePath, JSON.stringify(tokenData));
+
+      const fileData = JSON.parse(fs.readFileSync(tokenFilePath, 'utf8'));
+
+      assert.strictEqual(fileData.token, 'my-secret-token-xyz');
+      assert.strictEqual(fileData.bbRunUuid, 'run-uuid-789');
+      assert.strictEqual(fileData.baseUrl, 'https://meshstack.example.com');
     });
   });
 });

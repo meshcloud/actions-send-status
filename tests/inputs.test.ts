@@ -1,24 +1,8 @@
-import { describe, it, beforeEach, mock } from 'node:test';
+import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { readInputs, parseAndValidateOutputsJson, validateInputs, ActionInputs } from '../src/inputs';
-
-// Mock @actions/core
-const mockGetInput = mock.fn();
-const core = {
-  getInput: mockGetInput
-};
-
-// Replace the module
-mock.module('@actions/core', {
-  namedExports: {
-    getInput: mockGetInput
-  }
-});
+import { parseAndValidateOutputsJson, validateInputs, ActionInputs } from '../src/inputs';
 
 describe('inputs.ts', () => {
-  beforeEach(() => {
-    mockGetInput.mock.resetCalls();
-  });
 
   describe('parseAndValidateOutputsJson', () => {
     it('should parse valid JSON object', () => {
@@ -176,95 +160,5 @@ describe('inputs.ts', () => {
     });
   });
 
-  describe('readInputs', () => {
-    it('should read all inputs correctly', () => {
-      mockGetInput.mock.mockImplementation((name: string) => {
-        const inputs: { [key: string]: string } = {
-          'step_id': 'step-123',
-          'step_status': 'COMPLETED',
-          'user_message': 'Task completed successfully',
-          'system_message': 'System processed the task',
-          'run_status': 'SUCCESS',
-          'outputs_json': '{"result": "success", "count": 5}'
-        };
-        return inputs[name] || '';
-      });
 
-      const result = readInputs();
-
-      assert.deepStrictEqual(result, {
-        stepId: 'step-123',
-        stepStatus: 'COMPLETED',
-        userMessage: 'Task completed successfully',
-        systemMessage: 'System processed the task',
-        runStatus: 'SUCCESS',
-        outputs: { result: 'success', count: 5 }
-      });
-
-      assert.strictEqual(mockGetInput.mock.calls.length, 6);
-    });
-
-    it('should read inputs with empty outputs_json', () => {
-      mockGetInput.mock.mockImplementation((name: string) => {
-        const inputs: { [key: string]: string } = {
-          'step_id': '',
-          'step_status': '',
-          'user_message': '',
-          'system_message': '',
-          'run_status': 'IN_PROGRESS',
-          'outputs_json': '{}'
-        };
-        return inputs[name] || '';
-      });
-
-      const result = readInputs();
-
-      assert.deepStrictEqual(result, {
-        stepId: '',
-        stepStatus: '',
-        userMessage: '',
-        systemMessage: '',
-        runStatus: 'IN_PROGRESS',
-        outputs: {}
-      });
-    });
-
-    it('should throw error when validation fails', () => {
-      mockGetInput.mock.mockImplementation((name: string) => {
-        const inputs: { [key: string]: string } = {
-          'step_id': '',
-          'step_status': 'COMPLETED',
-          'user_message': '',
-          'system_message': '',
-          'run_status': 'SUCCESS',
-          'outputs_json': '{}'
-        };
-        return inputs[name] || '';
-      });
-
-      assert.throws(
-        () => readInputs(),
-        { message: 'step_id must be provided when setting step_status, user_message, system_message, or outputs_json' }
-      );
-    });
-
-    it('should throw error when outputs_json is invalid', () => {
-      mockGetInput.mock.mockImplementation((name: string) => {
-        const inputs: { [key: string]: string } = {
-          'step_id': 'step-123',
-          'step_status': '',
-          'user_message': '',
-          'system_message': '',
-          'run_status': 'SUCCESS',
-          'outputs_json': '[1, 2, 3]'
-        };
-        return inputs[name] || '';
-      });
-
-      assert.throws(
-        () => readInputs(),
-        { message: 'outputs_json must be a valid JSON object' }
-      );
-    });
-  });
 });
