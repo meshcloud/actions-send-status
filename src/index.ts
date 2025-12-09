@@ -1,5 +1,6 @@
 import * as core from '@actions/core';
 import * as os from 'os';
+import * as path from 'path';
 import { makeRequest, readTokenFromFile } from './api';
 import { ActionInputs, readInputs } from './inputs';
 
@@ -25,8 +26,11 @@ export async function run() {
   try {
     const inputs = readInputs();
 
+    // Use the well-known token file location
     const tempDir = process.env.RUNNER_TEMP || os.tmpdir();
-    const token = readTokenFromFile(tempDir);
+    const tokenFilePath = path.join(tempDir, 'meshstack_token.json');
+
+    const token = readTokenFromFile(tokenFilePath);
 
     const data = constructRequestData(inputs);
 

@@ -8,11 +8,9 @@ interface Token {
   baseUrl: string;
 }
 
-export function readTokenFromFile(tempDir: string): { token: string; bbRunUuid: string; baseUrl: string } {
-  const tokenFilePath = path.join(tempDir, 'meshstack_token.json');
-  
+export function readTokenFromFile(tokenFilePath: string): { token: string; bbRunUuid: string; baseUrl: string } {
   if (!fs.existsSync(tokenFilePath)) {
-    throw new Error('Token file does not exist at ${tokenFilePath}');
+    throw new Error(`Token file does not exist at ${tokenFilePath}`);
   }
 
   const tokenData = JSON.parse(fs.readFileSync(tokenFilePath, 'utf8'));
