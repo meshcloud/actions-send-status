@@ -1,36 +1,29 @@
 import axios from 'axios';
 import * as fs from 'fs';
-import * as path from 'path';
 
 interface Token {
   token: string;
-  bbRunUuid: string;
-  baseUrl: string;
 }
 
-export function readTokenFromFile(tempDir: string): { token: string; bbRunUuid: string; baseUrl: string } {
-  const tokenFilePath = path.join(tempDir, 'meshstack_token.json');
-  
+export function readTokenFromFile(tokenFilePath: string): { token: string } {
   if (!fs.existsSync(tokenFilePath)) {
-    throw new Error('Token file does not exist at ${tokenFilePath}');
+    throw new Error(`Token file does not exist at ${tokenFilePath}`);
   }
 
   const tokenData = JSON.parse(fs.readFileSync(tokenFilePath, 'utf8'));
 
-  if (!tokenData.token || !tokenData.bbRunUuid || !tokenData.baseUrl) {
-    throw new Error('Token file is missing required fields: token, bbRunUuid, or baseUrl');
+  if (!tokenData.token) {
+    throw new Error('Token file is missing required field: token');
   }
 
   return {
-    token: tokenData.token,
-    bbRunUuid: tokenData.bbRunUuid,
-    baseUrl: tokenData.baseUrl
+    token: tokenData.token
   };
 }
 
-export async function makeRequest(token: Token, data: any) {
+export async function makeRequest(token: Token, buildingBlockRunUrl: string, data: any) {
   const response = await axios.patch(
-    `${token.baseUrl}/api/meshobjects/meshbuildingblockruns/${token.bbRunUuid}/status/source/github`,
+    `${buildingBlockRunUrl}/status/source/github`,
     data,
     {
       headers: {
