@@ -1,14 +1,14 @@
 # meshStack Send Status Action
 
-This GitHub Action sends building block step status updates back to meshStack.
+This GitHub Action sends building block run step status updates back to meshStack. It integrates with the meshStack API 
+to provide rich feedback about step execution to application teams.
 
-Before using this action, set up authentication to meshStack with the [meshcloud/actions-meshstack-auth](https://github.com/meshcloud/actions-meshstack-auth) action and register the source with [meshcloud/actions-register-source](https://github.com/meshcloud/actions-register-source).
+Before using this action, set up authentication to meshStack with the [meshcloud/actions-meshstack-auth](https://github.com/meshcloud/actions-meshstack-auth) action and register your workflow as a source with [meshcloud/actions-register-source](https://github.com/meshcloud/actions-register-source). We recommend you pre-register all steps that your workflow will execute
+to improve user experience for your application teams.
 
 ## Overview
 
-The meshStack building block pipeline allows you to automate and manage complex workflows by defining a series of steps that need to be executed. Each building block run represents an instance of such a workflow. This GitHub Action helps you send the status of a step back to the registered source in the meshStack building block pipeline.
-
-In order to return updates for a run to meshStack, you first need to register one or multiple steps and their resources of your run execution. It is up to you how many or how you organize your steps. You can, however, also just send step results back and the registration takes place on the fly. But in order to have a consistent display and ordering of steps, it is highly advised to pre-register steps and sources.
+This action allows you to send updates to pre-registered steps or create new steps on the fly.
 
 ## Related Actions
 
@@ -44,42 +44,77 @@ Whenever a run was successful but meshStack did not receive a success for one or
 Besides a status, meshStack can also show custom user messages consuming the service and operator messages to the provider of the pipeline run inside of meshStack. This can be used to provide more detailed information about the current state of the run.
 
 ## Inputs
-- `step_id`: (required) The ID of the step
-- `step_status`: (required) The status of the step (SUCCEEDED or FAILED)
-- `user_message`: (optional) The user message for a failed step
-- `system_message`: (optional) The system message for a failed step
-- `outputs_json`: (optional) A JSON object with outputs of the step. All step outputs in a run will be merged by meshStack to produce the run outputs. See the [API documentation](https://docs.meshcloud.io/api/index.html#_update_sources_and_steps) for more details on how to use this field.
-- `run_status`: (optional) Indicates if this is the final status report (default: 'false')
+- `step_id` (required): The ID of the step to update
+- `step_status` (required): The status of the step - `IN_PROGRESS`, `SUCCEEDED`, or `FAILED`
+- `user_message` (optional): A message shown to users consuming the service
+- `system_message` (optional): A message shown to operators/providers of the pipeline run
+- `outputs_json` (optional): A JSON object with outputs of the step. All step outputs in a run will be merged by meshStack to produce the run outputs. See the [API documentation](https://docs.meshcloud.io/api/index.html#_update_sources_and_steps) for more details on how to use this field.
+- `run_status` (optional): The final status of the run (`SUCCEEDED` or `FAILED`). Send this only once to signal to meshStack that the run is complete and you will not send further step updates.
 
+## Required GitHub Context Parameters
+
+This action requires the meshStack workflow trigger parameters to be present in the GitHub event payload:
+
+- `buildingBlockRunUrl` (required): URL to fetch the building block run object from the meshStack API
+- `buildingBlockRun` (optional, legacy): Base64-encoded building block run object (alternative to `buildingBlockRunUrl`)
+
+These parameters are automatically provided by meshStack when it triggers your workflow via `workflow_dispatch`.
 
 ## Example Usage
 
 ```yaml
-- name: Setup meshStack bbrun
-  id: setup-meshstack-auth
-  uses: meshcloud/actions-register-source@main
-  with:
-    client_id: ${{ vars.BUILDINGBLOCK_API_CLIENT_ID }}
-    key_secret: ${{ secrets.BUILDINGBLOCK_API_KEY_SECRET }}
-    steps: |
-      [
-        { "id": "terraform-validate", "displayName": "terraform validate" },
-        { "id": "terraform-plan", "displayName": "terraform plan" },
-        { "id": "terraform-apply", "displayName": "terraform apply" }
-      ] 
+name: Deploy Building Block
 
-- name: Terragrunt validate
-  id: terraform-validate
-  run: terraform validate
+on:
+  workflow_dispatch:
+    inputs:
+      buildingBlockRunUrl:
+        description: "URL to fetch the Building Block Run Object from"
+        required: true
 
-- name: Send status on validate
-  if: ${{ steps.terraform-validate.outcome == 'success' }}
-  uses: meshcloud/actions-send-status@main
-  with:
-    step_id: "terraform-validate"
-    step_status: ${{ steps.terraform-validate.outcome == 'success' && 'SUCCEEDED' || 'FAILED' }} 
-    user_message: ${{ steps.terraform-validate.outcome == 'success' && 'Successful plan Terraform configuration.' || 'Failed to plan Terraform configuration.' }}
-    system_message:  ${{ steps.terraform-validate.outcome == 'success' && 'Successful plan Terraform configuration.' || 'Failed to plan Terraform configuration.' }}
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup meshStack auth
+        id: setup-meshstack-auth
+        uses: meshcloud/actions-meshstack-auth@v2
+        with:
+          base_url: ${{ vars.MESHSTACK_BASE_URL }}
+          client_id: ${{ vars.BUILDINGBLOCK_API_CLIENT_ID }}
+          key_secret: ${{ secrets.BUILDINGBLOCK_API_KEY_SECRET }}
+
+      - name: Register building block source
+        id: register-source
+        uses: meshcloud/actions-register-source@v2
+        with:
+          steps: |
+            [
+              { "id": "terraform-validate", "displayName": "Terraform Validate" }
+            ]
+
+      - name: update run step terraform-validate in-progress
+        uses: meshcloud/actions-send-status@v2
+        with:
+          step_id: terraform-validate
+          status: IN_PROGRESS
+
+      - name: Terraform validate
+        id: terraform-validate
+        run: terraform validate
+
+      - name: update run step terraform-validate result
+        if: always()
+        uses: meshcloud/actions-send-status@v2
+        with:
+          step_id: terraform-validate
+          step_status: ${{ steps.terraform-validate.outcome == 'success' && 'SUCCEEDED' || 'FAILED' }}
+          user_message: ${{ steps.terraform-validate.outcome == 'success' && 'Successfully validated Terraform configuration.' || 'Failed to validate Terraform configuration.' }}
+          # also mark the run completed
+          run_status: ${{ steps.terraform-validate.outcome == 'success' && 'SUCCEEDED' || 'FAILED' }}
 ```
 
 
