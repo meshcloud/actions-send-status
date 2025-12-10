@@ -2,7 +2,14 @@ import * as core from '@actions/core';
 import * as os from 'os';
 import * as path from 'path';
 import { makeRequest, readTokenFromFile } from './api';
-import { ActionInputs, readInputs } from './inputs';
+import { ActionInputs, readInputs, CoreAdapter as InputsCoreAdapter } from './inputs';
+
+// allows stubbing @actions/core in tests
+export interface CoreAdapter extends InputsCoreAdapter {
+  setOutput: (name: string, value: any) => void;
+  setFailed: (message: string) => void;
+  error: (message: string) => void;
+}
 
 export function constructRequestData(inputs: ActionInputs): any {
   const data: any = {
@@ -22,9 +29,10 @@ export function constructRequestData(inputs: ActionInputs): any {
   return data;
 }
 
-export async function run() {
+export async function runSendStatus(coreAdapter: CoreAdapter = core): Promise<void> {
   try {
-    const inputs = readInputs();
+    // Read inputs using the adapter
+    const inputs = readInputs(coreAdapter);
 
     // Use the well-known token file location
     const tempDir = process.env.RUNNER_TEMP || os.tmpdir();
@@ -34,23 +42,28 @@ export async function run() {
 
     const data = constructRequestData(inputs);
 
-    const response = makeRequest(token, data);
-    core.setOutput('response', response);
+    const response = await makeRequest(token, data);
+    coreAdapter.setOutput('response', response);
   }
   catch (error) {
     if (error instanceof Error) {
-      core.setFailed(error.message);
+      coreAdapter.setFailed(error.message);
       const response = (error as any).response;
       if (response) {
-        core.error(`API response status: ${response.status}`);
-        core.error(`API response data: ${JSON.stringify(response.data)}`);
+        coreAdapter.error(`API response status: ${response.status}`);
+        coreAdapter.error(`API response data: ${JSON.stringify(response.data)}`);
       }
+      throw error;
     } else {
-      core.setFailed('An unknown error occurred: ${error}');
+      coreAdapter.setFailed('An unknown error occurred: ${error}');
+      throw error;
     }
   }
 }
 
+export async function run() {
+  await runSendStatus(core);
+}
 
 // Only run if this file is executed directly (not imported for testing)
 if (require.main === module) {

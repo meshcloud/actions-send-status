@@ -28070,6 +28070,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.constructRequestData = constructRequestData;
+exports.runSendStatus = runSendStatus;
 exports.run = run;
 const core = __importStar(__nccwpck_require__(2186));
 const os = __importStar(__nccwpck_require__(2037));
@@ -28091,30 +28092,36 @@ function constructRequestData(inputs) {
     }
     return data;
 }
-async function run() {
+async function runSendStatus(coreAdapter = core) {
     try {
-        const inputs = (0, inputs_1.readInputs)();
+        // Read inputs using the adapter
+        const inputs = (0, inputs_1.readInputs)(coreAdapter);
         // Use the well-known token file location
         const tempDir = process.env.RUNNER_TEMP || os.tmpdir();
         const tokenFilePath = path.join(tempDir, 'meshstack_token.json');
         const token = (0, api_1.readTokenFromFile)(tokenFilePath);
         const data = constructRequestData(inputs);
-        const response = (0, api_1.makeRequest)(token, data);
-        core.setOutput('response', response);
+        const response = await (0, api_1.makeRequest)(token, data);
+        coreAdapter.setOutput('response', response);
     }
     catch (error) {
         if (error instanceof Error) {
-            core.setFailed(error.message);
+            coreAdapter.setFailed(error.message);
             const response = error.response;
             if (response) {
-                core.error(`API response status: ${response.status}`);
-                core.error(`API response data: ${JSON.stringify(response.data)}`);
+                coreAdapter.error(`API response status: ${response.status}`);
+                coreAdapter.error(`API response data: ${JSON.stringify(response.data)}`);
             }
+            throw error;
         }
         else {
-            core.setFailed('An unknown error occurred: ${error}');
+            coreAdapter.setFailed('An unknown error occurred: ${error}');
+            throw error;
         }
     }
+}
+async function run() {
+    await runSendStatus(core);
 }
 // Only run if this file is executed directly (not imported for testing)
 if (require.main === require.cache[eval('__filename')]) {
@@ -28157,15 +28164,15 @@ exports.readInputs = readInputs;
 exports.parseAndValidateOutputsJson = parseAndValidateOutputsJson;
 exports.validateInputs = validateInputs;
 const core = __importStar(__nccwpck_require__(2186));
-function readInputs() {
-    const outputsJsonInput = core.getInput('outputs_json');
+function readInputs(coreAdapter = core) {
+    const outputsJsonInput = coreAdapter.getInput('outputs_json');
     const outputs = parseAndValidateOutputsJson(outputsJsonInput);
     const inputs = {
-        stepId: core.getInput('step_id'),
-        stepStatus: core.getInput('step_status'),
-        userMessage: core.getInput('user_message'),
-        systemMessage: core.getInput('system_message'),
-        runStatus: core.getInput('run_status'),
+        stepId: coreAdapter.getInput('step_id'),
+        stepStatus: coreAdapter.getInput('step_status'),
+        userMessage: coreAdapter.getInput('user_message'),
+        systemMessage: coreAdapter.getInput('system_message'),
+        runStatus: coreAdapter.getInput('run_status'),
         outputs: outputs
     };
     validateInputs(inputs);

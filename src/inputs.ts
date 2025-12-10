@@ -9,16 +9,20 @@ export interface ActionInputs {
   outputs?: object
 }
 
-export function readInputs(): ActionInputs {
-  const outputsJsonInput = core.getInput('outputs_json');
+export interface CoreAdapter {
+  getInput: (name: string) => string;
+}
+
+export function readInputs(coreAdapter: CoreAdapter = core): ActionInputs {
+  const outputsJsonInput = coreAdapter.getInput('outputs_json');
   const outputs = parseAndValidateOutputsJson(outputsJsonInput);
 
   const inputs: ActionInputs = {
-    stepId: core.getInput('step_id'),
-    stepStatus: core.getInput('step_status'),
-    userMessage: core.getInput('user_message'),
-    systemMessage: core.getInput('system_message'),
-    runStatus: core.getInput('run_status'),
+    stepId: coreAdapter.getInput('step_id'),
+    stepStatus: coreAdapter.getInput('step_status'),
+    userMessage: coreAdapter.getInput('user_message'),
+    systemMessage: coreAdapter.getInput('system_message'),
+    runStatus: coreAdapter.getInput('run_status'),
     outputs: outputs
   };
 
