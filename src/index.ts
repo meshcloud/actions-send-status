@@ -77,27 +77,27 @@ export async function runSendStatus(coreAdapter: CoreAdapter = core, githubConte
 
     const data = constructRequestData(inputs);
 
-    const response = await makeRequest(token, runUrl, data);
+    const response = await makeRequest(token, runUrl, data, coreAdapter);
     coreAdapter.setOutput('response', response);
-  }
-  catch (error) {
+  } catch (error) {
+    // Exception handler of last resort
     if (error instanceof Error) {
       coreAdapter.setFailed(error.message);
-      const response = (error as any).response;
-      if (response) {
-        coreAdapter.error(`API response status: ${response.status}`);
-        coreAdapter.error(`API response data: ${JSON.stringify(response.data)}`);
-      }
-      throw error;
     } else {
-      coreAdapter.setFailed('An unknown error occurred: ${error}');
-      throw error;
+      coreAdapter.setFailed(`An unknown error occurred: ${error}`);
     }
+    throw error;
   }
 }
 
 export async function run() {
-  await runSendStatus(core);
+  try {
+    await runSendStatus(core);
+  } catch (error) {
+    // Last-resort exception handler: prevent unhandled rejections
+    // The error has already been logged and setFailed has been called
+    process.exit(1);
+  }
 }
 
 // Only run if this file is executed directly (not imported for testing)

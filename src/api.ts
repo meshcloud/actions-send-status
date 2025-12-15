@@ -1,5 +1,6 @@
 import axios from 'axios';
 import * as fs from 'fs';
+import { isAxiosError, logAxiosError, CoreAdapter } from './error-utils';
 
 interface Token {
   token: string;
@@ -21,18 +22,25 @@ export function readTokenFromFile(tokenFilePath: string): { token: string } {
   };
 }
 
-export async function makeRequest(token: Token, buildingBlockRunUrl: string, data: any) {
-  const response = await axios.patch(
-    `${buildingBlockRunUrl}/status/source/github`,
-    data,
-    {
-      headers: {
-        'Content-Type': 'application/vnd.meshcloud.api.meshbuildingblockrun.v1.hal+json',
-        'Accept': 'application/vnd.meshcloud.api.meshbuildingblockrun.v1.hal+json',
-        'Authorization': `Bearer ${token.token}`
+export async function makeRequest(token: Token, buildingBlockRunUrl: string, data: any, coreAdapter?: CoreAdapter) {
+  try {
+    const response = await axios.patch(
+      `${buildingBlockRunUrl}/status/source/github`,
+      data,
+      {
+        headers: {
+          'Content-Type': 'application/vnd.meshcloud.api.meshbuildingblockrun.v1.hal+json',
+          'Accept': 'application/vnd.meshcloud.api.meshbuildingblockrun.v1.hal+json',
+          'Authorization': `Bearer ${token.token}`
+        }
       }
-    }
-  );
+    );
 
-  return response.data;
+    return response.data;
+  } catch (error) {
+    if (isAxiosError(error) && coreAdapter) {
+      logAxiosError(error, coreAdapter, 'Failed to send status update');
+    }
+    throw error;
+  }
 }

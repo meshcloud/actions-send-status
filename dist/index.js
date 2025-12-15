@@ -33369,6 +33369,7 @@ exports.readTokenFromFile = readTokenFromFile;
 exports.makeRequest = makeRequest;
 const axios_1 = __importDefault(__nccwpck_require__(8757));
 const fs = __importStar(__nccwpck_require__(7147));
+const error_utils_1 = __nccwpck_require__(823);
 function readTokenFromFile(tokenFilePath) {
     if (!fs.existsSync(tokenFilePath)) {
         throw new Error(`Token file does not exist at ${tokenFilePath}`);
@@ -33381,15 +33382,86 @@ function readTokenFromFile(tokenFilePath) {
         token: tokenData.token
     };
 }
-async function makeRequest(token, buildingBlockRunUrl, data) {
-    const response = await axios_1.default.patch(`${buildingBlockRunUrl}/status/source/github`, data, {
-        headers: {
-            'Content-Type': 'application/vnd.meshcloud.api.meshbuildingblockrun.v1.hal+json',
-            'Accept': 'application/vnd.meshcloud.api.meshbuildingblockrun.v1.hal+json',
-            'Authorization': `Bearer ${token.token}`
+async function makeRequest(token, buildingBlockRunUrl, data, coreAdapter) {
+    try {
+        const response = await axios_1.default.patch(`${buildingBlockRunUrl}/status/source/github`, data, {
+            headers: {
+                'Content-Type': 'application/vnd.meshcloud.api.meshbuildingblockrun.v1.hal+json',
+                'Accept': 'application/vnd.meshcloud.api.meshbuildingblockrun.v1.hal+json',
+                'Authorization': `Bearer ${token.token}`
+            }
+        });
+        return response.data;
+    }
+    catch (error) {
+        if ((0, error_utils_1.isAxiosError)(error) && coreAdapter) {
+            (0, error_utils_1.logAxiosError)(error, coreAdapter, 'Failed to send status update');
         }
-    });
-    return response.data;
+        throw error;
+    }
+}
+
+
+/***/ }),
+
+/***/ 823:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.formatAxiosError = formatAxiosError;
+exports.logAxiosError = logAxiosError;
+exports.isAxiosError = isAxiosError;
+const axios_1 = __importDefault(__nccwpck_require__(8757));
+/**
+ * Formats an AxiosError into a concise, readable error message
+ * Includes: HTTP method, URL, status code, and response body (typically error message)
+ * Excludes verbose config details that cause thousands of lines of output
+ */
+function formatAxiosError(error) {
+    const parts = [];
+    if (error.config) {
+        if (error.config.method) {
+            parts.push(`Method: ${error.config.method.toUpperCase()}`);
+        }
+        if (error.config.url) {
+            parts.push(`URL: ${error.config.url}`);
+        }
+    }
+    if (error.response) {
+        parts.push(`Status: ${error.response.status}`);
+        if (error.response.data) {
+            const responseData = error.response.data;
+            if (typeof responseData === 'string') {
+                parts.push(`Response: ${responseData}`);
+            }
+            else if (typeof responseData === 'object') {
+                parts.push(`Response: ${JSON.stringify(responseData)}`);
+            }
+        }
+    }
+    else if (error.message) {
+        parts.push(`Error: ${error.message}`);
+    }
+    return parts.join(' | ');
+}
+/**
+ * Logs an AxiosError with concise formatting
+ * HTTP errors are considered "expected" and are treated as fully handled
+ */
+function logAxiosError(error, coreAdapter, context) {
+    const formattedError = formatAxiosError(error);
+    coreAdapter.error(`${context}: ${formattedError}`);
+}
+/**
+ * Determines if an error is an AxiosError
+ */
+function isAxiosError(error) {
+    return axios_1.default.isAxiosError(error);
 }
 
 
@@ -33476,27 +33548,29 @@ async function runSendStatus(coreAdapter = core, githubContext = github) {
         }
         coreAdapter.debug(`Building Block Run URL: ${runUrl}`);
         const data = constructRequestData(inputs);
-        const response = await (0, api_1.makeRequest)(token, runUrl, data);
+        const response = await (0, api_1.makeRequest)(token, runUrl, data, coreAdapter);
         coreAdapter.setOutput('response', response);
     }
     catch (error) {
+        // Exception handler of last resort
         if (error instanceof Error) {
             coreAdapter.setFailed(error.message);
-            const response = error.response;
-            if (response) {
-                coreAdapter.error(`API response status: ${response.status}`);
-                coreAdapter.error(`API response data: ${JSON.stringify(response.data)}`);
-            }
-            throw error;
         }
         else {
-            coreAdapter.setFailed('An unknown error occurred: ${error}');
-            throw error;
+            coreAdapter.setFailed(`An unknown error occurred: ${error}`);
         }
+        throw error;
     }
 }
 async function run() {
-    await runSendStatus(core);
+    try {
+        await runSendStatus(core);
+    }
+    catch (error) {
+        // Last-resort exception handler: prevent unhandled rejections
+        // The error has already been logged and setFailed has been called
+        process.exit(1);
+    }
 }
 // Only run if this file is executed directly (not imported for testing)
 if (require.main === require.cache[eval('__filename')]) {
