@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as github from '@actions/github';
 import { makeRequest, readTokenFromFile } from './api';
 import { ActionInputs, readInputs, CoreAdapter as InputsCoreAdapter } from './inputs';
+import { isAxiosError, logAxiosError } from './error-utils';
 
 // allows stubbing @actions/core in tests
 export interface CoreAdapter extends InputsCoreAdapter {
@@ -79,20 +80,16 @@ export async function runSendStatus(coreAdapter: CoreAdapter = core, githubConte
 
     const response = await makeRequest(token, runUrl, data);
     coreAdapter.setOutput('response', response);
-  }
-  catch (error) {
-    if (error instanceof Error) {
-      coreAdapter.setFailed(error.message);
-      const response = (error as any).response;
-      if (response) {
-        coreAdapter.error(`API response status: ${response.status}`);
-        coreAdapter.error(`API response data: ${JSON.stringify(response.data)}`);
-      }
-      throw error;
+  } catch (error) {
+    // Handle all errors at this level
+    if (isAxiosError(error)) {
+      logAxiosError(error, coreAdapter, 'Send status operation failed');
+    } else if (error instanceof Error) {
+      coreAdapter.error(error.message);
     } else {
-      coreAdapter.setFailed('An unknown error occurred: ${error}');
-      throw error;
+      coreAdapter.error(`Unexpected error: ${error}`);
     }
+    coreAdapter.setFailed(error instanceof Error ? error.message : String(error));
   }
 }
 
