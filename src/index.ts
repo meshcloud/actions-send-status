@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as github from '@actions/github';
 import { makeRequest, readTokenFromFile } from './api';
 import { ActionInputs, readInputs, CoreAdapter as InputsCoreAdapter } from './inputs';
+import { isAxiosError, logAxiosError } from './error-utils';
 
 // allows stubbing @actions/core in tests
 export interface CoreAdapter extends InputsCoreAdapter {
@@ -77,27 +78,23 @@ export async function runSendStatus(coreAdapter: CoreAdapter = core, githubConte
 
     const data = constructRequestData(inputs);
 
-    const response = await makeRequest(token, runUrl, data, coreAdapter);
+    const response = await makeRequest(token, runUrl, data);
     coreAdapter.setOutput('response', response);
   } catch (error) {
-    // Exception handler of last resort
-    if (error instanceof Error) {
-      coreAdapter.setFailed(error.message);
+    // Handle all errors at this level
+    if (isAxiosError(error)) {
+      logAxiosError(error, coreAdapter, 'Send status operation failed');
+    } else if (error instanceof Error) {
+      coreAdapter.error(error.message);
     } else {
-      coreAdapter.setFailed(`An unknown error occurred: ${error}`);
+      coreAdapter.error(`Unexpected error: ${error}`);
     }
-    throw error;
+    coreAdapter.setFailed(error instanceof Error ? error.message : String(error));
   }
 }
 
 export async function run() {
-  try {
-    await runSendStatus(core);
-  } catch (error) {
-    // Last-resort exception handler: prevent unhandled rejections
-    // The error has already been logged and setFailed has been called
-    process.exit(1);
-  }
+  await runSendStatus(core);
 }
 
 // Only run if this file is executed directly (not imported for testing)

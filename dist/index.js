@@ -33369,7 +33369,6 @@ exports.readTokenFromFile = readTokenFromFile;
 exports.makeRequest = makeRequest;
 const axios_1 = __importDefault(__nccwpck_require__(8757));
 const fs = __importStar(__nccwpck_require__(7147));
-const error_utils_1 = __nccwpck_require__(823);
 function readTokenFromFile(tokenFilePath) {
     if (!fs.existsSync(tokenFilePath)) {
         throw new Error(`Token file does not exist at ${tokenFilePath}`);
@@ -33382,23 +33381,15 @@ function readTokenFromFile(tokenFilePath) {
         token: tokenData.token
     };
 }
-async function makeRequest(token, buildingBlockRunUrl, data, coreAdapter) {
-    try {
-        const response = await axios_1.default.patch(`${buildingBlockRunUrl}/status/source/github`, data, {
-            headers: {
-                'Content-Type': 'application/vnd.meshcloud.api.meshbuildingblockrun.v1.hal+json',
-                'Accept': 'application/vnd.meshcloud.api.meshbuildingblockrun.v1.hal+json',
-                'Authorization': `Bearer ${token.token}`
-            }
-        });
-        return response.data;
-    }
-    catch (error) {
-        if ((0, error_utils_1.isAxiosError)(error) && coreAdapter) {
-            (0, error_utils_1.logAxiosError)(error, coreAdapter, 'Failed to send status update');
+async function makeRequest(token, buildingBlockRunUrl, data) {
+    const response = await axios_1.default.patch(`${buildingBlockRunUrl}/status/source/github`, data, {
+        headers: {
+            'Content-Type': 'application/vnd.meshcloud.api.meshbuildingblockrun.v1.hal+json',
+            'Accept': 'application/vnd.meshcloud.api.meshbuildingblockrun.v1.hal+json',
+            'Authorization': `Bearer ${token.token}`
         }
-        throw error;
-    }
+    });
+    return response.data;
 }
 
 
@@ -33505,6 +33496,7 @@ const path = __importStar(__nccwpck_require__(1017));
 const github = __importStar(__nccwpck_require__(5438));
 const api_1 = __nccwpck_require__(8229);
 const inputs_1 = __nccwpck_require__(7063);
+const error_utils_1 = __nccwpck_require__(823);
 function constructRequestData(inputs) {
     const data = {
         status: inputs.runStatus ? inputs.runStatus : "IN_PROGRESS",
@@ -33548,29 +33540,25 @@ async function runSendStatus(coreAdapter = core, githubContext = github) {
         }
         coreAdapter.debug(`Building Block Run URL: ${runUrl}`);
         const data = constructRequestData(inputs);
-        const response = await (0, api_1.makeRequest)(token, runUrl, data, coreAdapter);
+        const response = await (0, api_1.makeRequest)(token, runUrl, data);
         coreAdapter.setOutput('response', response);
     }
     catch (error) {
-        // Exception handler of last resort
-        if (error instanceof Error) {
-            coreAdapter.setFailed(error.message);
+        // Handle all errors at this level
+        if ((0, error_utils_1.isAxiosError)(error)) {
+            (0, error_utils_1.logAxiosError)(error, coreAdapter, 'Send status operation failed');
+        }
+        else if (error instanceof Error) {
+            coreAdapter.error(error.message);
         }
         else {
-            coreAdapter.setFailed(`An unknown error occurred: ${error}`);
+            coreAdapter.error(`Unexpected error: ${error}`);
         }
-        throw error;
+        coreAdapter.setFailed(error instanceof Error ? error.message : String(error));
     }
 }
 async function run() {
-    try {
-        await runSendStatus(core);
-    }
-    catch (error) {
-        // Last-resort exception handler: prevent unhandled rejections
-        // The error has already been logged and setFailed has been called
-        process.exit(1);
-    }
+    await runSendStatus(core);
 }
 // Only run if this file is executed directly (not imported for testing)
 if (require.main === require.cache[eval('__filename')]) {
