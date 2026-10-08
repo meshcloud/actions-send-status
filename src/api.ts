@@ -1,5 +1,6 @@
 import axios from 'axios';
 import * as fs from 'fs';
+import { REQUEST_TIMEOUT_MS, RetryOptions, withRetry } from './retry';
 
 interface Token {
   token: string;
@@ -21,8 +22,8 @@ export function readTokenFromFile(tokenFilePath: string): { token: string } {
   };
 }
 
-export async function makeRequest(token: Token, buildingBlockRunUrl: string, data: any) {
-  const response = await axios.patch(
+export async function makeRequest(token: Token, buildingBlockRunUrl: string, data: any, retryOptions: RetryOptions) {
+  const response = await withRetry(() => axios.patch(
     `${buildingBlockRunUrl}/status/source/github`,
     data,
     {
@@ -30,9 +31,10 @@ export async function makeRequest(token: Token, buildingBlockRunUrl: string, dat
         'Content-Type': 'application/vnd.meshcloud.api.meshbuildingblockrun.v1.hal+json',
         'Accept': 'application/vnd.meshcloud.api.meshbuildingblockrun.v1.hal+json',
         'Authorization': `Bearer ${token.token}`
-      }
+      },
+      timeout: REQUEST_TIMEOUT_MS
     }
-  );
+  ), retryOptions);
 
   return response.data;
 }

@@ -11,6 +11,7 @@ export interface CoreAdapter extends InputsCoreAdapter {
   setOutput: (name: string, value: any) => void;
   setFailed: (message: string) => void;
   error: (message: string) => void;
+  warning: (message: string) => void;
   debug: (message: string) => void;
 }
 
@@ -78,7 +79,7 @@ export async function runSendStatus(coreAdapter: CoreAdapter = core, githubConte
 
     const data = constructRequestData(inputs);
 
-    const response = await makeRequest(token, runUrl, data);
+    const response = await makeRequest(token, runUrl, data, { warning: coreAdapter.warning });
     coreAdapter.setOutput('response', response);
   } catch (error) {
     // Handle all errors at this level

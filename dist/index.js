@@ -33369,6 +33369,7 @@ exports.readTokenFromFile = readTokenFromFile;
 exports.makeRequest = makeRequest;
 const axios_1 = __importDefault(__nccwpck_require__(8757));
 const fs = __importStar(__nccwpck_require__(7147));
+const retry_1 = __nccwpck_require__(1043);
 function readTokenFromFile(tokenFilePath) {
     if (!fs.existsSync(tokenFilePath)) {
         throw new Error(`Token file does not exist at ${tokenFilePath}`);
@@ -33381,14 +33382,15 @@ function readTokenFromFile(tokenFilePath) {
         token: tokenData.token
     };
 }
-async function makeRequest(token, buildingBlockRunUrl, data) {
-    const response = await axios_1.default.patch(`${buildingBlockRunUrl}/status/source/github`, data, {
+async function makeRequest(token, buildingBlockRunUrl, data, retryOptions) {
+    const response = await (0, retry_1.withRetry)(() => axios_1.default.patch(`${buildingBlockRunUrl}/status/source/github`, data, {
         headers: {
             'Content-Type': 'application/vnd.meshcloud.api.meshbuildingblockrun.v1.hal+json',
             'Accept': 'application/vnd.meshcloud.api.meshbuildingblockrun.v1.hal+json',
             'Authorization': `Bearer ${token.token}`
-        }
-    });
+        },
+        timeout: retry_1.REQUEST_TIMEOUT_MS
+    }), retryOptions);
     return response.data;
 }
 
@@ -33540,7 +33542,7 @@ async function runSendStatus(coreAdapter = core, githubContext = github) {
         }
         coreAdapter.debug(`Building Block Run URL: ${runUrl}`);
         const data = constructRequestData(inputs);
-        const response = await (0, api_1.makeRequest)(token, runUrl, data);
+        const response = await (0, api_1.makeRequest)(token, runUrl, data, { warning: coreAdapter.warning });
         coreAdapter.setOutput('response', response);
     }
     catch (error) {
@@ -33628,6 +33630,64 @@ function validateInputs(inputs) {
     // when the user attempts to only resolve the run, provide a failure message
     if ((inputs.stepStatus || inputs.userMessage || inputs.systemMessage || hasOutputs) && !inputs.stepId) {
         throw new Error('step_id must be provided when setting step_status, user_message, system_message, or outputs_json');
+    }
+}
+
+
+/***/ }),
+
+/***/ 1043:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.REQUEST_TIMEOUT_MS = void 0;
+exports.withRetry = withRetry;
+const axios_1 = __nccwpck_require__(8757);
+const error_utils_1 = __nccwpck_require__(823);
+// meshStack answers these, or does not answer at all, for a few minutes while it is being updated.
+const RETRYABLE_STATUSES = [502, 503, 504];
+const RETRYABLE_NETWORK_ERROR_CODES = ['ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT', 'ECONNABORTED', 'EPIPE', 'EAI_AGAIN', 'ERR_NETWORK'];
+exports.REQUEST_TIMEOUT_MS = 30000;
+const RETRY_BUDGET_MS = 10 * 60000;
+const INITIAL_DELAY_MS = 2000;
+const MAX_DELAY_MS = 60000;
+function isRetryable(error) {
+    if (error.response) {
+        return RETRYABLE_STATUSES.includes(error.response.status);
+    }
+    return error.code !== undefined && RETRYABLE_NETWORK_ERROR_CODES.includes(error.code);
+}
+function retryDelayMs(failedAttempt) {
+    return Math.min(INITIAL_DELAY_MS * 2 ** (failedAttempt - 1), MAX_DELAY_MS);
+}
+/**
+ * Calls `request` until it succeeds, fails with an error that is not retryable, or the next attempt would start
+ * after the retry budget. Throws the last error unchanged.
+ */
+async function withRetry(request, options) {
+    const { warning, budgetMs = RETRY_BUDGET_MS, sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms)), now = Date.now } = options;
+    const deadline = now() + budgetMs;
+    for (let attempt = 1;; attempt++) {
+        try {
+            return await request(attempt);
+        }
+        catch (error) {
+            if (!(0, axios_1.isAxiosError)(error) || !isRetryable(error)) {
+                if (attempt > 1) {
+                    warning(`Attempt ${attempt} failed with an error that is not retried. An earlier attempt may have reached meshStack.`);
+                }
+                throw error;
+            }
+            const delayMs = retryDelayMs(attempt);
+            if (now() + delayMs >= deadline) {
+                warning(`Attempt ${attempt} failed and the retry budget of ${budgetMs / 1000}s is used up.`);
+                throw error;
+            }
+            warning(`Attempt ${attempt} failed (${(0, error_utils_1.formatAxiosError)(error)}). Retrying in ${delayMs / 1000}s.`);
+            await sleep(delayMs);
+        }
     }
 }
 
