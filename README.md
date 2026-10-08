@@ -51,6 +51,10 @@ Besides a status, meshStack can also show custom user messages consuming the ser
 - `outputs_json` (optional): A JSON object with outputs of the step. All step outputs in a run will be merged by meshStack to produce the run outputs. See the [API documentation](https://docs.meshcloud.io/api/index.html#_update_sources_and_steps) for more details on how to use this field.
 - `run_status` (optional): The final status of the run (`SUCCEEDED` or `FAILED`). Send this only once to signal to meshStack that the run is complete and you will not send further step updates.
 
+## Retries
+
+meshStack can be unavailable for a few minutes while it is updated. The action therefore retries the status update when meshStack answers `502`, `503` or `504`, when the connection fails, or when meshStack does not answer within 30 seconds. It waits 2 seconds before the first retry and doubles the wait up to 60 seconds, for about 10 minutes in total, and logs a warning for each retry. Any other error, such as a `500` or a `4xx`, fails the step immediately.
+
 ## Required GitHub Context Parameters
 
 This action requires the meshStack workflow trigger parameters to be present in the GitHub event payload:
